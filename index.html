@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>🇫🇷 Grand Raid 2026 — Monitor Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.145/Build/Cesium/Cesium.js"></script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.145/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-0:#f5f7fa;--bg-1:#ffffff;--bg-2:#f0f2f6;--bg-3:#e4e8ef;
+  --border:#d1d9e6;--border-hi:#a8b4c8;
+  --text-0:#0a1628;--text-1:#4a5a75;--text-2:#8896b0;
+  --fr-blue:#0055A4;--fr-blue-light:#1E7FE0;--fr-red:#EF4135;--fr-white:#ffffff;
+  --green:#00a854;--amber:#e88b00;
+  --shadow:0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:0 4px 12px rgba(0,0,0,0.10);
+  --shadow-lg:0 10px 30px rgba(0,0,0,0.15);
+  --font-mono:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+}
+html.dark{
+  --bg-0:#050810;--bg-1:#0a0f1a;--bg-2:#0f1624;--bg-3:#151f30;
+  --border:#1c2940;--border-hi:#2a3a55;
+  --text-0:#e6f1ff;--text-1:#8ba3c7;--text-2:#4a5f7f;
+  --fr-blue:#1E7FE0;--fr-blue-light:#3B82F6;
+  --green:#00ff88;--amber:#ffb800;
+  --shadow:0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg:0 10px 30px rgba(0,0,0,0.7);
+}
+html{height:100%}
+body{font-family:var(--font-sans);background:var(--bg-0);color:var(--text-0);
+  font-size:12px;line-height:1.4;min-height:100%;overflow-x:hidden;
+  transition:background 0.3s,color 0.3s}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg-2)}
+::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--fr-blue-light)}
+
+/* TOPBAR */
+.topbar{
+  min-height:50px;background:var(--bg-1);
+  display:flex;align-items:center;
+  padding:6px 12px;gap:10px;position:sticky;top:0;z-index:100;flex-wrap:wrap;
+  position:relative;box-shadow:var(--shadow);
+}
+.topbar::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:linear-gradient(to right,
+    var(--fr-blue) 0 33.33%,var(--fr-white) 33.33% 66.66%,var(--fr-red) 66.66% 100%);
+}
+.brand{font-family:var(--font-mono);font-size:12px;font-weight:700;
+  color:var(--text-0);letter-spacing:1px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.brand .flag{display:inline-flex;width:22px;height:14px;border-radius:2px;overflow:hidden;flex-shrink:0;
+  box-shadow:0 0 0 1px var(--border)}
+.brand .flag span{flex:1}
+.brand .flag .b{background:var(--fr-blue)}
+.brand .flag .w{background:#fff}
+.brand .flag .r{background:var(--fr-red)}
+.brand .sub{color:var(--text-2);font-weight:400;font-size:11px;display:none}
+
+.topbar-right{margin-left:auto;display:flex;gap:10px;font-family:var(--font-mono);
+  font-size:10px;align-items:center;flex-wrap:wrap;order:2}
+.topbar-stat{display:flex;gap:4px;color:var(--text-1);align-items:center;white-space:nowrap}
+.topbar-stat .val{color:var(--fr-blue);font-weight:700}
+.topbar-stat .val.green{color:var(--green)}
+.topbar-stat .val.amber{color:var(--amber)}
+
+#themeToggle{
+  background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);
+  padding:6px 12px;border-radius:6px;font-family:var(--font-mono);font-size:11px;
+  font-weight:600;cursor:pointer;transition:all 0.2s;margin-left:8px;white-space:nowrap;
+}
+#themeToggle:hover{background:var(--bg-3);border-color:var(--fr-blue-light);color:var(--fr-blue)}
+
+/* APP */
+.app{
+  display:grid;grid-template-columns:240px 1fr 280px;
+  height:calc(100vh - 53px);overflow:hidden;
+  transition:grid-template-columns 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+@media(min-width:1600px){.app{grid-template-columns:280px 1fr 340px}}
+@media(max-width:1200px){.app{grid-template-columns:220px 1fr 260px}}
+.app.focus-map{grid-template-columns:0 1fr 0}
+.app.focus-map .sidebar,.app.focus-map .right{opacity:0;pointer-events:none;overflow:hidden}
+.app.hide-left{grid-template-columns:0 1fr 280px}
+.app.hide-left .sidebar{opacity:0;pointer-events:none;overflow:hidden}
+.app.hide-right{grid-template-columns:240px 1fr 0}
+.app.hide-right .right{opacity:0;pointer-events:none;overflow:hidden}
+.app.hide-rankings .stats-grid,.app.hide-rankings .rank-grid{display:none}
+
+/* SIDEBAR GAUCHE */
+.sidebar{background:var(--bg-1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;min-height:0;transition:opacity 0.3s}
+.sb-head{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg-2);flex-shrink:0}
+.sb-title{font-family:var(--font-mono);font-size:10px;font-weight:700;
+  color:var(--fr-blue);letter-spacing:1.2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.sb-title::before{content:'';width:3px;height:12px;
+  background:linear-gradient(180deg,var(--fr-blue) 0 33%,var(--text-0) 33% 66%,var(--fr-red) 66% 100%);}
+.sb-count{font-family:var(--font-mono);font-size:10px;color:var(--text-2);margin-top:5px}
+
+.sb-list{flex:1;overflow-y:auto;padding:6px;min-height:0;-webkit-overflow-scrolling:touch}
+.sb-item{background:var(--bg-2);border:1px solid var(--border);border-left:3px solid var(--fr-blue);
+  border-radius:5px;padding:8px 10px;margin-bottom:4px;cursor:pointer;
+  transition:all 0.15s;position:relative}
+.sb-item:hover{border-color:var(--fr-blue-light);border-left-color:var(--fr-blue-light);
+  background:var(--bg-1);transform:translateX(2px);box-shadow:var(--shadow)}
+.sb-item.active{border-color:var(--fr-blue);border-left-color:var(--fr-blue);background:var(--bg-1);
+  box-shadow:var(--shadow-md)}
+.sb-item.active::after{content:'';position:absolute;right:8px;top:50%;
+  transform:translateY(-50%);width:5px;height:5px;border-radius:50%;
+  background:var(--fr-blue);box-shadow:0 0 8px var(--fr-blue)}
+.sb-item-h{display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.sb-item-icon{font-size:14px;flex-shrink:0}
+.sb-item-name{font-family:var(--font-mono);font-size:10px;font-weight:700;
+  color:var(--text-0);flex:1;line-height:1.25;word-break:break-word}
+.sb-item-meta{display:flex;gap:6px;font-family:var(--font-mono);font-size:8px;
+  color:var(--text-2);margin-top:2px}
+.sb-item-meta .live{color:var(--green);font-weight:700}
+
+/* CENTRE */
+.center{background:var(--bg-0);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+.work-bar{padding:10px 14px;background:var(--bg-1);border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+  box-shadow:var(--shadow)}
+.work-bar-info{flex:1;min-width:140px}
+.work-bar-title{font-family:var(--font-mono);font-size:13px;font-weight:700;
+  color:var(--text-0);display:flex;align-items:center;gap:7px;line-height:1.3}
+.work-bar-title .ic{font-size:17px;filter:drop-shadow(0 0 6px currentColor)}
+.work-bar-url{font-family:var(--font-mono);font-size:8.5px;color:var(--text-2);margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.work-bar-actions{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.wb-btn{font-family:var(--font-mono);font-size:9.5px;font-weight:700;
+  padding:6px 10px;border-radius:4px;text-decoration:none;letter-spacing:0.3px;
+  transition:all 0.15s;cursor:pointer;border:1px solid transparent;
+  display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.wb-btn.blue{background:var(--fr-blue);color:#fff;border-color:var(--fr-blue)}
+.wb-btn.blue:hover{background:var(--fr-blue-light);border-color:var(--fr-blue-light);
+  transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.wb-btn.green{background:var(--green);color:#fff;border-color:var(--green)}
+.wb-btn.green:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.wb-btn.green.active{background:var(--fr-red);border-color:var(--fr-red)}
+.wb-btn.white{background:var(--bg-1);color:var(--fr-blue);border-color:var(--fr-blue)}
+.wb-btn.white:hover{background:var(--fr-blue);color:#fff}
+.wb-btn.red{background:var(--fr-red);color:#fff;border-color:var(--fr-red)}
+.wb-btn.red:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.wb-btn.gray{background:var(--bg-2);color:var(--text-1);border-color:var(--border);
+  padding:6px 9px;font-size:11px}
+.wb-btn.gray:hover{background:var(--bg-3);color:var(--fr-blue);border-color:var(--fr-blue);
+  transform:translateY(-1px)}
+.wb-btn.gray.active{background:var(--fr-blue);color:#fff;border-color:var(--fr-blue)}
+.wb-sep{width:1px;height:20px;background:var(--border);margin:0 3px}
+
+/* CARTE */
+#cesiumContainer{flex:1;position:relative;overflow:hidden;background:var(--bg-0);min-height:0}
+
+.legend {
+  position:absolute; bottom:16px; left:16px; z-index:999;
+  background:rgba(255,255,255,.96); backdrop-filter:blur(12px);
+  border:1px solid var(--border); border-radius:8px;
+  padding:14px 18px; font-size:.78rem;
+  display:block; min-width:230px;
+  box-shadow:var(--shadow-lg); font-family:var(--font-mono);
+  transition:all 0.3s;
+}
+html.dark .legend { background:rgba(15,20,25,.95); }
+.legend.collapsed { padding:8px 12px; min-width:auto; }
+.legend.collapsed .legend-row { display:none; }
+.legend.collapsed .legend-title { margin-bottom:0; cursor:pointer; }
+.legend .legend-title {
+  color:var(--fr-blue); font-weight:800;
+  font-size:.7rem; text-transform:uppercase;
+  letter-spacing:1.5px; margin-bottom:12px;
+  display:flex; align-items:center; gap:6px;
+}
+.legend .legend-toggle {
+  cursor:pointer;background:transparent;border:none;color:var(--fr-blue);
+  font-size:11px;padding:0 4px;margin-left:auto;transition:transform 0.2s;
+}
+.legend.collapsed .legend-toggle { transform:rotate(180deg); }
+.legend-row {
+  display:flex; align-items:center; gap:10px;
+  margin:6px 0; color:var(--text-1);
+  font-weight:600; cursor:pointer;
+  padding:4px 6px; border-radius:6px; transition:background .2s;
+}
+.legend-row:hover { background:var(--bg-2); }
+.legend-row.hidden { opacity:.35; text-decoration:line-through; }
+.legend-line { display:inline-block; width:28px; height:4px; border-radius:2px; flex-shrink:0 }
+
+/* ═══════════════════════════════════════════════════════════
+   BOUSSOLE
+   ═══════════════════════════════════════════════════════════ */
+.compass-container {
+  position: absolute;
+  top: 90px;
+  right: 20px;
+  z-index: 999;
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.compass {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(12px);
+  border: 2px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  cursor: grab;
+  position: relative;
+  transition: box-shadow 0.2s;
+  user-select: none;
+}
+html.dark .compass { background: rgba(15,20,25,.95); }
+.compass:active {
+  cursor: grabbing;
+  box-shadow: 0 0 0 3px rgba(0,85,164,.3);
+}
+.compass::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 1px dashed var(--border);
+}
+.compass-needle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 30px;
+  margin-left: -2px;
+  margin-top: -30px;
+  transform-origin: 50% 100%;
+  transition: transform 0.15s ease-out;
+}
+.compass-needle::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 50%;
+  background: var(--fr-red);
+  border-radius: 2px 2px 0 0;
+}
+.compass-needle::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 50%;
+  background: var(--fr-blue);
+  border-radius: 0 0 2px 2px;
+}
+.compass-label {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-0);
+  cursor: pointer;
+  padding: 2px;
+  transition: color 0.2s;
+}
+.compass-label:hover { color: var(--fr-blue); }
+.compass-label.n { top: 4px; left: 50%; transform: translateX(-50%); color: var(--fr-red); }
+.compass-label.s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.compass-label.e { right: 5px; top: 50%; transform: translateY(-50%); }
+.compass-label.w { left: 5px; top: 50%; transform: translateY(-50%); }
+
+.compass-reset {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-1);
+  transition: all 0.2s;
+}
+html.dark .compass-reset { background: rgba(15,20,25,.95); }
+.compass-reset:hover {
+  background: var(--fr-blue);
+  color: #fff;
+  border-color: var(--fr-blue);
+  transform: rotate(-90deg);
+}
+.compass-angle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-1);
+  background: rgba(255,255,255,.96);
+  padding: 3px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+html.dark .compass-angle { background: rgba(15,20,25,.95); }
+
+/* Carte live counter */
+.live-counter {
+  position:absolute; top:16px; right:16px; z-index:999;
+  background:rgba(255,255,255,.96); backdrop-filter:blur(12px);
+  border:1px solid var(--border); border-radius:8px;
+  padding:10px 14px; font-family:var(--font-mono); font-size:.72rem;
+  box-shadow:var(--shadow-lg); display:none;
+}
+html.dark .live-counter { background:rgba(15,20,25,.95); }
+.live-counter.visible { display:block; }
+.live-counter .lc-title {
+  color:var(--fr-blue); font-weight:800; font-size:.65rem;
+  text-transform:uppercase; letter-spacing:1.2px; margin-bottom:6px;
+}
+.live-counter .lc-row { display:flex; gap:10px; margin:3px 0; align-items:center; }
+.live-counter .lc-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.live-counter .lc-dot.male { background:var(--fr-blue); }
+.live-counter .lc-dot.female { background:var(--fr-red); }
+.live-counter .lc-count { font-weight:700; color:var(--text-0); }
+.live-counter .lc-label { color:var(--text-2); }
+
+/* STATS */
+.stats-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:10px; padding:10px 14px;
+  background:var(--bg-1); border-bottom:1px solid var(--border);
+  transition:all 0.3s;
+}
+.stat-card {
+  background:var(--bg-1); border:1px solid var(--border);
+  border-radius:10px; padding:14px;
+  transition:all .25s; position:relative; overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.stat-card::before {
+  content:''; position:absolute; top:0; left:0;
+  width:100%; height:3px;
+  background:linear-gradient(90deg,var(--fr-blue),var(--fr-white),var(--fr-red));
+  transform:scaleX(0); transform-origin:left;
+  transition:transform .3s;
+}
+.stat-card:hover { transform:translateY(-2px); border-color:var(--fr-blue-light); box-shadow:var(--shadow-md); }
+.stat-card:hover::before { transform:scaleX(1); }
+.stat-icon { font-size:1.3rem; margin-bottom:6px; display:block; }
+.stat-label {
+  font-size:9px; text-transform:uppercase;
+  letter-spacing:1.3px; color:var(--text-2);
+  font-weight:700; margin-bottom:6px; font-family:var(--font-mono);
+}
+.stat-value {
+  font-family:var(--font-mono);
+  font-size:1.5rem; font-weight:800;
+  color:var(--text-0); line-height:1;
+}
+.stat-value.green { color:var(--green); }
+.stat-value.amber { color:var(--amber); }
+.stat-value.red { color:var(--fr-red); }
+.stat-value.blue { color:var(--fr-blue); }
+
+/* CLASSEMENTS */
+.rank-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:12px; padding:10px 14px;
+  background:var(--bg-1); border-top:1px solid var(--border);
+  flex-shrink:0; transition:all 0.3s;
+}
+@media (max-width:900px) { .rank-grid { grid-template-columns:1fr; } }
+.rank-panel {
+  background:var(--bg-1); border:1px solid var(--border);
+  border-radius:10px; padding:14px;
+  display:flex; flex-direction:column;
+  box-shadow:var(--shadow);
+}
+.rank-panel-header {
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:12px; padding-bottom:10px;
+  border-bottom:1px solid var(--border);
+}
+.rank-panel-header .icon {
+  width:32px; height:32px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1rem;
+}
+.rank-panel.scratch .icon { background:rgba(0,85,164,.15); color:var(--fr-blue); }
+.rank-panel.female .icon { background:rgba(239,65,53,.15); color:var(--fr-red); }
+.rank-panel-header h3 {
+  font-size:.8rem; font-weight:800;
+  text-transform:uppercase; letter-spacing:1px;
+  color:var(--text-0); font-family:var(--font-mono);
+}
+.rank-panel-header .count {
+  margin-left:auto;
+  font-size:.7rem; color:var(--text-2);
+  font-weight:600; font-family:var(--font-mono);
+}
+.rank-list {
+  display:flex; flex-direction:column; gap:5px;
+  max-height:360px; overflow-y:auto;
+  padding-right:4px;
+}
+.rank-list::-webkit-scrollbar { width:5px; }
+.rank-list::-webkit-scrollbar-track { background:var(--bg-2); border-radius:3px; }
+.rank-list::-webkit-scrollbar-thumb { background:var(--border-hi); border-radius:3px; }
+.rank-list::-webkit-scrollbar-thumb:hover { background:var(--fr-blue-light); }
+
+.rank-item {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px;
+  background:var(--bg-2);
+  border-radius:8px;
+  border-left:3px solid var(--border);
+  transition:all .15s; flex-shrink:0;
+}
+.rank-item:hover { background:var(--bg-3); transform:translateX(3px); }
+.rank-item.p1 { border-left-color:var(--amber); background:rgba(232,139,0,.08); }
+.rank-item.p2 { border-left-color:var(--fr-blue-light); background:rgba(30,127,224,.08); }
+.rank-item.p3 { border-left-color:var(--fr-red); background:rgba(239,65,53,.08); }
+.rank-item.tracked { border-left-color:var(--green); box-shadow:inset 3px 0 0 var(--green); }
+.rank-item .medal {
+  width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:.68rem;
+  background:var(--bg-3); color:var(--text-1);
+  flex-shrink:0; font-family:var(--font-mono);
+}
+.rank-item.p1 .medal { background:linear-gradient(135deg,var(--amber),#e89d1f); color:#fff; }
+.rank-item.p2 .medal { background:linear-gradient(135deg,var(--fr-blue-light),var(--fr-blue)); color:#fff; }
+.rank-item.p3 .medal { background:linear-gradient(135deg,var(--fr-red),#b32d24); color:#fff; }
+.rank-item .name {
+  flex:1; font-weight:700; font-size:.8rem;
+  color:var(--text-0);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.rank-item .bib {
+  font-family:var(--font-mono);
+  font-size:.68rem; color:var(--text-2);
+  font-weight:600; flex-shrink:0;
+}
+.rank-item .flag {
+  font-size:.72rem; font-weight:700;
+  color:var(--text-2); flex-shrink:0;
+}
+.rank-item .pos-live {
+  font-family:var(--font-mono);
+  font-size:.65rem; color:var(--green);
+  font-weight:700; flex-shrink:0;
+}
+
+#status {
+  text-align:center; padding:12px;
+  background:var(--bg-1); border-top:1px solid var(--border);
+  color:var(--text-1);
+  font-size:.75rem; font-weight:600;
+  letter-spacing:.5px; text-transform:uppercase;
+  font-family:var(--font-mono);
+  flex-shrink:0;
+}
+
+/* SIDEBAR DROITE */
+.right{background:var(--bg-1);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;min-height:0;transition:opacity 0.3s}
+.rs-head{padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg-2);
+  font-family:var(--font-mono);font-size:9.5px;font-weight:700;color:var(--fr-blue);
+  letter-spacing:1.2px;text-transform:uppercase;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.rs-head::before{content:'';width:3px;height:12px;
+  background:linear-gradient(180deg,var(--fr-blue) 0 33%,var(--text-0) 33% 66%,var(--fr-red) 66% 100%);}
+.rs-body{flex:1;overflow-y:auto;padding:10px;min-height:0;-webkit-overflow-scrolling:touch}
+
+.intel-panel{background:var(--bg-1);border:1px solid var(--border);border-radius:5px;
+  margin-bottom:8px;overflow:hidden;box-shadow:var(--shadow)}
+.intel-head{padding:6px 10px;background:var(--bg-2);border-bottom:1px solid var(--border);
+  font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--fr-blue);
+  letter-spacing:0.8px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.intel-body{padding:8px}
+.intel-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;
+  border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:9px}
+.intel-row:last-child{border-bottom:none}
+.intel-row .k{color:var(--text-1)}
+.intel-row .v{color:var(--text-0);font-weight:700;text-align:right;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px}
+.intel-row .v.cyan{color:var(--fr-blue)}
+.intel-row .v.green{color:var(--green)}
+.intel-row .v.amber{color:var(--amber)}
+.intel-row .v.red{color:var(--fr-red)}
+
+.progress{height:3px;background:var(--bg-3);border-radius:2px;overflow:hidden;margin-top:3px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--fr-blue),var(--fr-blue-light));
+  border-radius:2px;transition:width 0.4s}
+
+.intel-toggle{display:none;width:100%;background:var(--bg-2);border:none;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  color:var(--fr-blue);font-family:var(--font-mono);font-size:11px;font-weight:700;
+  padding:12px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;
+  align-items:center;justify-content:center;gap:8px}
+.intel-toggle:hover{background:var(--bg-3)}
+
+/* FOOTER */
+footer {
+  text-align:center; padding:16px 20px;
+  color:var(--text-2); font-size:.72rem;
+  border-top:1px solid var(--border);
+  line-height:1.8; font-family:var(--font-mono);
+  background:var(--bg-1);
+}
+footer a { color:var(--fr-blue); text-decoration:none; font-weight:600; }
+footer a:hover { color:var(--fr-blue-light); }
+footer .devise-fr {
+  color:var(--fr-blue); font-weight:800;
+  letter-spacing:3px; text-transform:uppercase;
+  margin-bottom:6px; font-size:.72rem;
+  background:linear-gradient(90deg,var(--fr-blue) 0 33%,var(--text-0) 33% 66%,var(--fr-red) 66% 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  body{overflow-y:auto;overflow-x:hidden}
+  .app{display:flex;flex-direction:column;height:auto;min-height:calc(100vh - 53px);
+    overflow:visible;transition:none}
+  .app.focus-map .sidebar,.app.focus-map .right,
+  .app.hide-left .sidebar,.app.hide-right .right{opacity:1;pointer-events:auto;overflow:visible;display:flex}
+  .sidebar{order:1;width:100%;max-height:none;border-right:none;border-bottom:1px solid var(--border)}
+  .sb-list{max-height:240px}
+  .center{order:2;width:100%}
+  #cesiumContainer{position:relative;width:100%;height:60vh;min-height:400px;max-height:75vh;flex:none}
+  .intel-toggle{display:flex}
+  .right{order:3;width:100%;max-height:none;border-left:none;border-top:none;display:none}
+  .right.open{display:flex}
+  .topbar-right{order:2;margin-left:auto}
+  .brand .sub{display:inline}
+  .rank-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .topbar{padding:8px 10px;gap:8px;position:relative}
+  .brand{font-size:12px;width:100%;justify-content:center}
+  .brand .sub{display:inline;font-size:10px}
+  .topbar-right{width:100%;justify-content:center;gap:12px;font-size:10px;
+    padding:4px 0;border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);margin:0;order:2}
+  .wb-btn{flex:1;justify-content:center;font-size:9.5px;padding:7px 6px;min-width:0}
+  .wb-btn.gray{flex:0 0 auto;padding:7px 12px}
+  #cesiumContainer{height:55vh;min-height:340px;max-height:70vh}
+  .legend{font-size:0.7rem;padding:10px 12px;min-width:180px}
+  .stat-value{font-size:1.2rem}
+  .rank-list{max-height:300px}
+  .compass-container { top: 70px; right: 10px; }
+  .compass { width: 56px; height: 56px; }
+  .compass-needle { height: 24px; margin-top: -24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="flag"><span class="b"></span><span class="w"></span><span class="r"></span></span>
+    GRAND RAID 2026
+    <span class="sub">/ live monitor</span>
+  </div>
+
+  <div class="topbar-right">
+    <div class="topbar-stat"><span>HEURE</span><span class="val green" id="tbTime">--:--:--</span></div>
+    <div class="topbar-stat"><span>SUIVIS</span><span class="val amber" id="tbTracked">0</span></div>
+    <div class="topbar-stat"><span>STATUT</span><span class="val" id="tbStatus">—</span></div>
+    <button id="themeToggle">🌙 Sombre</button>
+  </div>
+</div>
+
+<div class="app" id="appEl">
+
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-title">◆ LES 5 COURSES</div>
+      <div class="sb-count" id="sbCount">Chargement...</div>
+    </div>
+    <div class="sb-list" id="sbList">
+      <div class="loading" style="padding:20px;font-size:10px">⏳ Chargement des courses...</div>
+    </div>
+  </aside>
+
+  <main class="center">
+    <div class="work-bar">
+      <div class="work-bar-info">
+        <div class="work-bar-title">
+          <span class="ic" id="activeIcon">🇫🇷</span>
+          <span id="activeName">Chargement...</span>
+        </div>
+        <div class="work-bar-url" id="activeUrl">—</div>
+      </div>
+      <div class="work-bar-actions">
+        <button class="wb-btn green" id="trackBtn">🟢 <span class="lbl">Suivi live</span></button>
+        <button class="wb-btn blue" id="loadBtn">📥 <span class="lbl">Tracés</span></button>
+        <button class="wb-btn white" id="viewAllBtn">🗺️ <span class="lbl">Vue</span></button>
+        <button class="wb-btn red" id="toggleBtn">👁️ <span class="lbl">Masquer</span></button>
+
+        <span class="wb-sep"></span>
+
+        <button class="wb-btn gray" id="toggleLeft" title="Masquer les courses (L)">◀</button>
+        <button class="wb-btn gray" id="toggleFocus" title="Carte plein écran (F)">⛶</button>
+        <button class="wb-btn gray" id="toggleRight" title="Masquer l'intelligence (R)">▶</button>
+        <button class="wb-btn gray" id="toggleRankings" title="Masquer les classements">📋</button>
+      </div>
+    </div>
+
+    <div id="cesiumContainer">
+      <div class="legend" id="legend">
+        <div class="legend-title">
+          ◆ PARCOURS
+          <button class="legend-toggle" id="legendToggle" title="Replier la légende">▼</button>
+        </div>
+        <div class="legend-row" data-race="GRR"><span class="legend-line" style="background:#F9B233;"></span>Diagonale des Fous (180 km)</div>
+        <div class="legend-row" data-race="MAS"><span class="legend-line" style="background:#009E60;"></span>Mascareignes (74 km)</div>
+        <div class="legend-row" data-race="TDB"><span class="legend-line" style="background:#1B5DA8;"></span>Trail de Bourbon (106 km)</div>
+        <div class="legend-row" data-race="ZEM"><span class="legend-line" style="background:#E4032E;"></span>Zembrocal Trail (160 km)</div>
+        <div class="legend-row" data-race="MTR"><span class="legend-line" style="background:#fc8230;"></span>Métis Trail (51 km)</div>
+      </div>
+
+      <!-- 🧭 BOUSSOLE -->
+      <div class="compass-container" id="compassContainer">
+        <div class="compass" id="compass" title="Glisser pour tourner · Double-clic pour reset">
+          <span class="compass-label n" data-dir="N">N</span>
+          <span class="compass-label s" data-dir="S">S</span>
+          <span class="compass-label e" data-dir="E">E</span>
+          <span class="compass-label w" data-dir="O">O</span>
+          <div class="compass-needle" id="compassNeedle"></div>
+        </div>
+        <button class="compass-reset" id="compassReset" title="Recentrer au Nord">↻</button>
+        <div class="compass-angle" id="compassAngle">0°</div>
+      </div>
+
+      <div class="live-counter" id="liveCounter">
+        <div class="lc-title">◆ SUIVI EN DIRECT</div>
+        <div class="lc-row">
+          <span class="lc-dot male"></span>
+          <span class="lc-count" id="lcMale">0</span>
+          <span class="lc-label">hommes</span>
+        </div>
+        <div class="lc-row">
+          <span class="lc-dot female"></span>
+          <span class="lc-count" id="lcFemale">0</span>
+          <span class="lc-label">femmes</span>
+        </div>
+        <div class="lc-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+          <span class="lc-label">MAJ</span>
+          <span class="lc-count" id="lcUpdate">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-icon">🏁</span>
+        <div class="stat-label">Statut course</div>
+        <div class="stat-value blue" id="stat-status">—</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">👥</span>
+        <div class="stat-label">Inscrits</div>
+        <div class="stat-value blue" id="stat-registered">—</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🏃</span>
+        <div class="stat-label">En course</div>
+        <div class="stat-value amber" id="stat-onrace">0</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🏆</span>
+        <div class="stat-label">Finishers</div>
+        <div class="stat-value green" id="stat-finisher">0</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">❌</span>
+        <div class="stat-label">Abandons</div>
+        <div class="stat-value red" id="stat-dnf">0</div>
+      </div>
+    </div>
+
+    <div class="rank-grid">
+      <div class="rank-panel scratch">
+        <div class="rank-panel-header">
+          <div class="icon">🏅</div>
+          <h3>Top 20 · Hommes</h3>
+          <span class="count" id="count-scratch">—</span>
+        </div>
+        <div class="rank-list" id="rank-scratch">Chargement…</div>
+      </div>
+      <div class="rank-panel female">
+        <div class="rank-panel-header">
+          <div class="icon">👩</div>
+          <h3>Top 20 · Femmes</h3>
+          <span class="count" id="count-female">—</span>
+        </div>
+        <div class="rank-list" id="rank-female">Chargement…</div>
+      </div>
+    </div>
+
+    <div id="status">Initialisation du globe 3D…</div>
+  </main>
+
+  <button class="intel-toggle" id="intelToggle">
+    ◆ INTELLIGENCE <span id="intelArrow">▼</span>
+  </button>
+
+  <aside class="right" id="rightPanel">
+    <div class="rs-head">◆ INTELLIGENCE</div>
+    <div class="rs-body">
+      <div class="intel-panel">
+        <div class="intel-head"><span>📊 COURSE ACTIVE</span></div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Nom</span><span class="v cyan" id="ivName">—</span></div>
+          <div class="intel-row"><span class="k">Code</span><span class="v" id="ivCode">—</span></div>
+          <div class="intel-row"><span class="k">Distance</span><span class="v amber" id="ivDist">—</span></div>
+          <div class="intel-row"><span class="k">Dénivelé</span><span class="v red" id="ivDplus">—</span></div>
+          <div class="intel-row"><span class="k">Statut</span><span class="v green" id="ivStatus">—</span></div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>📈 STATISTIQUES</span></div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Inscrits</span><span class="v cyan" id="gsRegistered">—</span></div>
+          <div class="intel-row"><span class="k">En course</span><span class="v amber" id="gsOnRace">0</span></div>
+          <div class="intel-row"><span class="k">Finishers</span><span class="v green" id="gsFinisher">0</span></div>
+          <div class="intel-row"><span class="k">Abandons</span><span class="v red" id="gsDnf">0</span></div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>🟢 SUIVI EN DIRECT</span></div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Hommes suivis</span><span class="v cyan" id="ivMale">0</span></div>
+          <div class="intel-row"><span class="k">Femmes suivies</span><span class="v red" id="ivFemale">0</span></div>
+          <div class="intel-row"><span class="k">Dernière MAJ</span><span class="v green" id="ivLastUpdate">—</span></div>
+          <div class="intel-row"><span class="k">Rafraîchissement</span><span class="v amber">30 s</span></div>
+          <div class="intel-row"><span class="k">Statut</span><span class="v" id="ivTrackingStatus">Inactif</span></div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>🧭 ORIENTATION</span></div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Cap caméra</span><span class="v cyan" id="ivHeading">0°</span></div>
+          <div class="intel-row"><span class="k">Inclinaison</span><span class="v amber" id="ivPitch">-35°</span></div>
+          <div class="intel-row"><span class="k">Altitude</span><span class="v green" id="ivAltitude">35 km</span></div>
+          <div class="intel-row"><span class="k">Raccourci</span><span class="v">← →</span></div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>🏆 TOP COUREURS</span></div>
+        <div class="intel-body" id="topList">
+          <div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>📂 CATÉGORIES</span></div>
+        <div class="intel-body" id="catList">
+          <div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>⚙️ SYSTÈME</span></div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Source</span><span class="v">LiveTrail API</span></div>
+          <div class="intel-row"><span class="k">Tenant</span><span class="v cyan">grandraid-reunion_2026</span></div>
+          <div class="intel-row"><span class="k">Terrain</span><span class="v">Cesium 3D</span></div>
+          <div class="intel-row"><span class="k">MAJ</span><span class="v green" id="sysUpdate">—</span></div>
+          <div class="intel-row"><span class="k">Raccourcis</span><span class="v">F · L · R · Esc</span></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<footer>
+  <div class="devise-fr">Liberté · Égalité · Fraternité</div>
+  <strong>GRAND RAID DE LA RÉUNION — 34<sup>e</sup> édition</strong> · 15–18 octobre 2026<br>
+  Données live : <a href="https://grandraid-reunion.v3.livetrail.net/fr/2026" target="_blank">LiveTrail</a>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   MODE SOMBRE
+   ═══════════════════════════════════════════════════════════ */
+const themeToggle = document.getElementById('themeToggle');
+const savedTheme = localStorage.getItem('theme') || 'light';
+if (savedTheme === 'dark') {
+  document.documentElement.classList.add('dark');
+  themeToggle.textContent = '☀️ Clair';
+}
+themeToggle.addEventListener('click', () => {
+  document.documentElement.classList.toggle('dark');
+  const isDark = document.documentElement.classList.contains('dark');
+  themeToggle.textContent = isDark ? '☀️ Clair' : '🌙 Sombre';
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+});
+
+/* ═══════════════════════════════════════════════════════════
+   TOGGLES PANNEAUX
+   ═══════════════════════════════════════════════════════════ */
+const appEl = document.getElementById('appEl');
+
+document.getElementById('toggleLeft').addEventListener('click', function() {
+  appEl.classList.toggle('hide-left');
+  if (appEl.classList.contains('hide-left')) appEl.classList.remove('focus-map');
+  this.classList.toggle('active', appEl.classList.contains('hide-left'));
+  setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
+});
+document.getElementById('toggleRight').addEventListener('click', function() {
+  appEl.classList.toggle('hide-right');
+  if (appEl.classList.contains('hide-right')) appEl.classList.remove('focus-map');
+  this.classList.toggle('active', appEl.classList.contains('hide-right'));
+  setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
+});
+document.getElementById('toggleFocus').addEventListener('click', function() {
+  appEl.classList.toggle('focus-map');
+  if (appEl.classList.contains('focus-map')) appEl.classList.remove('hide-left', 'hide-right');
+  this.classList.toggle('active', appEl.classList.contains('focus-map'));
+  setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
+});
+document.getElementById('toggleRankings').addEventListener('click', function() {
+  appEl.classList.toggle('hide-rankings');
+  this.classList.toggle('active', appEl.classList.contains('hide-rankings'));
+  setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
+});
+
+document.getElementById('legendToggle').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('legend').classList.toggle('collapsed');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'f' || e.key === 'F') document.getElementById('toggleFocus').click();
+  else if (e.key === 'l' || e.key === 'L') document.getElementById('toggleLeft').click();
+  else if (e.key === 'r' || e.key === 'R') document.getElementById('toggleRight').click();
+  else if (e.key === 'Escape') {
+    appEl.classList.remove('focus-map', 'hide-left', 'hide-right', 'hide-rankings');
+    document.querySelectorAll('.wb-btn.gray').forEach(b => b.classList.remove('active'));
+    setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   CONFIG
+   ═══════════════════════════════════════════════════════════ */
+const TENANT = 'grandraid-reunion_2026';
+const API_LIVE = 'https://api.v3.livetrail.net/api/events/races/lives';
+const API_RACES = 'https://api.v3.livetrail.net/api/events/races/';
+const API_RUNNERS = 'https://api.v3.livetrail.net/api/events/runners';
+const REFRESH_MS = 60000;
+const TRACK_REFRESH_MS = 30000;
+const TOP_N = 20;
+
+const RACES = {
+  GRR: { name: 'Diagonale des Fous', code: 'DDF', dist: 180, dplus: '10 200 m', start: 'Saint-Pierre',  startLon: 55.45966, startLat: -21.33975, color: '#F9B233', icon: '🏔️', relays: false },
+  MAS: { name: 'Mascareignes',       code: 'MAS', dist: 74,  dplus: '3 800 m',  start: 'Hell-Bourg',    startLon: 55.52054, startLat: -21.0699,  color: '#009E60', icon: '🌿', relays: false },
+  TDB: { name: 'Trail de Bourbon',   code: 'TDB', dist: 106, dplus: '6 200 m',  start: 'Cilaos',        startLon: 55.471,   startLat: -21.134,   color: '#1B5DA8', icon: '💧', relays: false },
+  ZEM: { name: 'Zembrocal Trail',    code: 'ZEM', dist: 160, dplus: '8 460 m',  start: 'Saint-Joseph',  startLon: 55.62,    startLat: -21.378,   color: '#E4032E', icon: '🔁', relays: true },
+  MTR: { name: 'Métis Trail',        code: 'MTR', dist: 51,  dplus: '2 500 m',  start: 'Saint-Paul',    startLon: 55.271,   startLat: -21.010,   color: '#fc8230', icon: '🌅', relays: false }
+};
+
+const CHECKPOINTS = {
+  GRR: [
+    { name: 'Saint-Pierre',          alt: 3,    dist: 0,   lat: -21.33975, lon: 55.45966 },
+    { name: 'Domaine Vidot',         alt: 652,  dist: 14,  lat: -21.31272, lon: 55.5459 },
+    { name: 'Notre Dame de la Paix', alt: 1684, dist: 33,  lat: -21.2458,  lon: 55.59408 },
+    { name: 'Nez de Boeuf',          alt: 2022, dist: 45,  lat: -21.20083, lon: 55.62105 },
+    { name: 'Mare à Boue',           alt: 1601, dist: 56,  lat: -21.16115, lon: 55.57097 },
+    { name: 'Croisée Kerveguen',     alt: 2480, dist: 68,  lat: -21.11119, lon: 55.4955 },
+    { name: 'Bélouve',               alt: 1498, dist: 76,  lat: -21.06061, lon: 55.53594 },
+    { name: 'Hell-Bourg',            alt: 0,    dist: 81,  lat: -21.0699,  lon: 55.52054 },
+    { name: 'Plaine des Merles',     alt: 1808, dist: 94,  lat: -21.06617, lon: 55.45108 },
+    { name: 'Sentier Scout',         alt: 1630, dist: 96,  lat: -21.05489, lon: 55.45453 },
+    { name: 'Grand Place',           alt: 666,  dist: 108, lat: -21.03872, lon: 55.4099 },
+    { name: 'Roche plate',           alt: 1164, dist: 115, lat: -21.06946, lon: 55.40662 },
+    { name: 'Maido tête dure',       alt: 1950, dist: 124, lat: -21.05112, lon: 55.38089 },
+    { name: 'Ilet Savannah',         alt: 127,  dist: 140, lat: -20.97243, lon: 55.32557 },
+    { name: 'Chemin Ratinaud',       alt: 441,  dist: 148, lat: -20.96243, lon: 55.35695 },
+    { name: 'La Possession',         alt: 0,    dist: 157, lat: -20.92736, lon: 55.33896 },
+    { name: 'Grande Chaloupe',       alt: 11,   dist: 164, lat: -20.89583, lon: 55.37733 },
+    { name: 'Le Colorado',           alt: 684,  dist: 173, lat: -20.90835, lon: 55.42361 },
+    { name: 'La Vigie',              alt: 346,  dist: 178, lat: -20.88499, lon: 55.44212 },
+    { name: 'Saint-Denis La Redoute', alt: 50,  dist: 180, lat: -20.88499, lon: 55.44212 }
+  ]
+};
+
+let TRACKS = { GRR: null, MAS: null, TDB: null, ZEM: null, MTR: null };
+let viewer = null;
+let liveData = [];
+let currentRace = 'GRR';
+let trackDataSources = {};
+let trackVisibility = { GRR: true, MAS: true, TDB: true, ZEM: true, MTR: true };
+
+/* ═══════════════════════════════════════════════════════════
+   SUIVI EN DIRECT
+   ═══════════════════════════════════════════════════════════ */
+let liveMarkers = {};
+let liveRunners = { male: [], female: [] };
+let trackingActive = false;
+let trackingTimer = null;
+
+/* ═══════════════════════════════════════════════════════════
+   CESIUM
+   ═══════════════════════════════════════════════════════════ */
+async function initCesium() {
+  viewer = new Cesium.Viewer('cesiumContainer', {
+    baseLayerPicker: false, geocoder: false, homeButton: false,
+    sceneModePicker: false, navigationHelpButton: false,
+    animation: false, timeline: false, fullscreenButton: false,
+    infoBox: false, selectionIndicator: false
+  });
+
+  viewer.scene.globe.enableLighting = false;
+  viewer.scene.globe.brightness = 1.6;
+  viewer.scene.globe.contrast = 1.3;
+  viewer.scene.globe.saturation = 1.2;
+  viewer.scene.globe.showGroundAtmosphere = false;
+  viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#4a90c2');
+  viewer.scene.fog.enabled = false;
+
+  // Contrôles de navigation Cesium
+  viewer.scene.screenSpaceCameraController.enableTilt = true;
+  viewer.scene.screenSpaceCameraController.enableRotate = true;
+  viewer.scene.screenSpaceCameraController.enableLook = true;
+  viewer.scene.screenSpaceCameraController.minimumZoomDistance = 500;
+  viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000000;
+
+  viewer.imageryLayers.removeAll();
+  viewer.imageryLayers.addImageryProvider(
+    new Cesium.UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      credit: 'Tiles © Esri',
+      maximumLevel: 19,
+      tilingScheme: new Cesium.WebMercatorTilingScheme()
+    })
+  );
+
+  const credit = viewer._cesiumWidget._creditContainer;
+  if (credit) credit.style.display = 'none';
+
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(55.536, -21.115, 35000),
+    orientation: { heading: 0, pitch: Cesium.Math.toRadians(-35), roll: 0 }
+  });
+
+  addRaceMarkers();
+  setupCompass();
+}
+
+function addRaceMarkers() {
+  Object.entries(RACES).forEach(([code, info]) => {
+    viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(info.startLon, info.startLat, 0),
+      point: {
+        pixelSize: 14,
+        color: Cesium.Color.fromCssColorString(info.color),
+        outlineColor: Cesium.Color.WHITE, outlineWidth: 3
+      },
+      label: {
+        text: info.name,
+        font: 'bold 13px Inter, sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK, outlineWidth: 3,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -18)
+      }
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BOUSSOLE INTERACTIVE
+   ═══════════════════════════════════════════════════════════ */
+function setupCompass() {
+  const compass = document.getElementById('compass');
+  const needle = document.getElementById('compassNeedle');
+  const angleLabel = document.getElementById('compassAngle');
+  const resetBtn = document.getElementById('compassReset');
+
+  let isDragging = false;
+  let startX = 0;
+  let startHeading = 0;
+
+  function updateCompass() {
+    if (!viewer) return;
+    const heading = Cesium.Math.toDegrees(viewer.camera.heading);
+    const normalized = ((heading % 360) + 360) % 360;
+    needle.style.transform = `rotate(${-normalized}deg)`;
+    angleLabel.textContent = Math.round(normalized) + '°';
+
+    // Met aussi à jour le panneau intelligence
+    const pitch = Cesium.Math.toDegrees(viewer.camera.pitch);
+    const altitude = viewer.camera.positionCartographic.height;
+    document.getElementById('ivHeading').textContent = Math.round(normalized) + '°';
+    document.getElementById('ivPitch').textContent = Math.round(pitch) + '°';
+    document.getElementById('ivAltitude').textContent =
+      altitude > 1000 ? Math.round(altitude / 1000) + ' km' : Math.round(altitude) + ' m';
+  }
+
+  viewer.camera.changed.addEventListener(updateCompass);
+  viewer.camera.percentageChanged = 0.005;
+  updateCompass();
+
+  // Clic-glisser
+  compass.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    isDragging = true;
+    startX = e.clientX;
+    startHeading = viewer.camera.heading;
+    compass.style.cursor = 'grabbing';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - startX;
+    const newHeading = startHeading - deltaX * 0.008;
+    viewer.camera.setView({
+      orientation: {
+        heading: newHeading,
+        pitch: viewer.camera.pitch,
+        roll: 0
+      }
+    });
+    updateCompass();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      compass.style.cursor = 'grab';
+    }
+  });
+
+  // Touch (mobile)
+  compass.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    isDragging = true;
+    startX = e.touches[0].clientX;
+    startHeading = viewer.camera.heading;
+  }, { passive: false });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    const deltaX = e.touches[0].clientX - startX;
+    const newHeading = startHeading - deltaX * 0.008;
+    viewer.camera.setView({
+      orientation: { heading: newHeading, pitch: viewer.camera.pitch, roll: 0 }
+    });
+    updateCompass();
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    isDragging = false;
+  });
+
+  // Clic sur les lettres cardinales
+  compass.querySelectorAll('.compass-label').forEach(label => {
+    label.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dir = label.dataset.dir;
+      const headings = { 'N': 0, 'E': 90, 'S': 180, 'O': 270, 'W': 270 };
+      const targetHeading = Cesium.Math.toRadians(headings[dir] || 0);
+      viewer.camera.flyTo({
+        destination: viewer.camera.position,
+        orientation: {
+          heading: targetHeading,
+          pitch: viewer.camera.pitch,
+          roll: 0
+        },
+        duration: 0.8
+      });
+    });
+  });
+
+  // Double-clic = reset
+  compass.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    resetView();
+  });
+
+  resetBtn.addEventListener('click', resetView);
+
+  function resetView() {
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(55.536, -21.115, 35000),
+      orientation: {
+        heading: 0,
+        pitch: Cesium.Math.toRadians(-35),
+        roll: 0
+      },
+      duration: 1
+    });
+  }
+
+  console.log('🧭 Boussole activée — glisser pour tourner · double-clic pour reset');
+}
+
+/* Rotation clavier (flèches gauche/droite) */
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (!viewer) return;
+  const step = Cesium.Math.toRadians(5);
+  let heading = viewer.camera.heading;
+  let changed = false;
+
+  if (e.key === 'ArrowLeft') { heading -= step; changed = true; }
+  else if (e.key === 'ArrowRight') { heading += step; changed = true; }
+
+  if (changed) {
+    viewer.camera.setView({
+      orientation: { heading, pitch: viewer.camera.pitch, roll: viewer.camera.roll }
+    });
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   TRACÉS
+   ═══════════════════════════════════════════════════════════ */
+async function loadTrackUrls() {
+  setStatus('🔍 Récupération des URLs de tracés…');
+  let loaded = 0;
+  for (const raceId of Object.keys(TRACKS)) {
+    try {
+      const r = await fetch(API_RACES + raceId, { headers: { 'X-Tenant': TENANT } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (d.trackUrl) {
+        TRACKS[raceId] = d.trackUrl;
+        loaded++;
+      }
+    } catch (e) { console.error('❌ ' + raceId, e.message); }
+  }
+  setStatus('✓ ' + loaded + '/5 URLs récupérées', '#00a854');
+  return loaded;
+}
+
+async function loadTrack(raceId) {
+  const url = TRACKS[raceId];
+  if (!url) return false;
+  if (trackDataSources[raceId]) {
+    trackDataSources[raceId].show = trackVisibility[raceId];
+    return true;
+  }
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const raw = await r.json();
+
+    let coordinates = [];
+    if (Array.isArray(raw.segments)) {
+      raw.segments.forEach(seg => {
+        if (!Array.isArray(seg.segment)) return;
+        seg.segment.forEach(pt => {
+          if (Array.isArray(pt) && Array.isArray(pt[2]) && pt[2].length >= 2) {
+            const lon = pt[2][0], lat = pt[2][1];
+            if (typeof lon === 'number' && typeof lat === 'number' &&
+                lon > -180 && lon < 180 && lat > -90 && lat < 90) {
+              coordinates.push([lon, lat]);
+            }
+          }
+        });
+      });
+    }
+    if (!coordinates.length) throw new Error('Aucune coordonnée');
+
+    const geojson = {
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: coordinates },
+      properties: { name: RACES[raceId].name, raceId: raceId }
+    };
+
+    const ds = await Cesium.GeoJsonDataSource.load(geojson, {
+      stroke: Cesium.Color.fromCssColorString(RACES[raceId].color),
+      strokeWidth: 10,
+      clampToGround: true
+    });
+
+    ds.entities.values.forEach(entity => {
+      if (entity.polyline) {
+        entity.polyline.material = new Cesium.PolylineOutlineMaterialProperty({
+          color: Cesium.Color.fromCssColorString(RACES[raceId].color),
+          outlineWidth: 4,
+          outlineColor: Cesium.Color.WHITE
+        });
+        entity.polyline.width = 10;
+        entity.polyline.clampToGround = true;
+      }
+    });
+
+    ds.show = trackVisibility[raceId];
+    viewer.dataSources.add(ds);
+    trackDataSources[raceId] = ds;
+    console.log('✅ ' + raceId + ' : ' + coordinates.length + ' pts');
+    return true;
+  } catch (e) {
+    console.error('❌ Erreur ' + raceId, e);
+    return false;
+  }
+}
+
+async function loadAllTracks() {
+  const btn = document.getElementById('loadBtn');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ <span class="lbl">Chargement...</span>';
+
+  for (const raceId of Object.keys(TRACKS)) {
+    setStatus('📥 Chargement ' + raceId + '…');
+    await loadTrack(raceId);
+  }
+
+  const loaded = Object.keys(trackDataSources).length;
+  btn.disabled = false;
+  btn.innerHTML = '📥 <span class="lbl">Tracés</span>';
+  setStatus('✓ ' + loaded + '/5 tracés chargés', '#00a854');
+
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(55.536, -21.115, 35000),
+    orientation: { heading: 0, pitch: Cesium.Math.toRadians(-35), roll: 0 },
+    duration: 2
+  });
+}
+
+function toggleTrackVisibility(raceId) {
+  if (!trackDataSources[raceId]) return;
+  trackVisibility[raceId] = !trackVisibility[raceId];
+  trackDataSources[raceId].show = trackVisibility[raceId];
+  const row = document.querySelector(`.legend-row[data-race="${raceId}"]`);
+  if (row) row.classList.toggle('hidden', !trackVisibility[raceId]);
+}
+
+function viewAll() {
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(55.536, -21.115, 35000),
+    orientation: { heading: 0, pitch: Cesium.Math.toRadians(-35), roll: 0 },
+    duration: 2
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIVE DATA
+   ═══════════════════════════════════════════════════════════ */
+async function fetchLive() {
+  try {
+    const r = await fetch(API_LIVE, { headers: { 'X-Tenant': TENANT } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    liveData = await r.json();
+    renderAll();
+  } catch (e) {
+    console.error('❌ API :', e);
+  }
+}
+
+async function fetchTopRunners(raceId, sex = 'MALE', limit = TOP_N) {
+  if (RACES[raceId]?.relays) return [];
+  try {
+    const fullUrl = `${API_RUNNERS}?raceId=${raceId}&state=REGISTERED&sex=${sex}&limit=${limit}&page=0`;
+    const r = await fetch(fullUrl, { headers: { 'X-Tenant': TENANT } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const runners = d.runners || [];
+    runners.sort((a, b) => (b.index || 0) - (a.index || 0));
+    return runners;
+  } catch (e) {
+    console.error(`❌ runners ${raceId} ${sex}`, e);
+    return [];
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SUIVI EN DIRECT
+   ═══════════════════════════════════════════════════════════ */
+async function fetchRunnerPosition(bib) {
+  try {
+    const r = await fetch(`https://api.v3.livetrail.net/api/events/runners/${bib}/detail`, {
+      headers: { 'X-Tenant': TENANT }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+
+    const passings = d.passings || [];
+    if (!passings.length) return null;
+
+    const sorted = [...passings].sort((a, b) => (b.pointId || 0) - (a.pointId || 0));
+    const last = sorted[0];
+
+    const cps = CHECKPOINTS[currentRace] || [];
+    let cp = cps.find(c => c.dist === last.km) || cps.find(c => c.name === last.name);
+    if (!cp && last.km != null) {
+      cp = cps.reduce((best, c) =>
+        Math.abs(c.dist - last.km) < Math.abs(best.dist - last.km) ? c : best
+      , cps[0]);
+    }
+    if (!cp) return null;
+
+    return {
+      bib,
+      km: last.km ?? cp.dist,
+      name: last.name || cp.name,
+      time: last.time,
+      rank: last.rank || 0,
+      speed: last.speed || 0,
+      lat: cp.lat,
+      lon: cp.lon,
+      alt: cp.alt || 0,
+      status: d.status
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function updateLiveMarkers() {
+  if (!trackingActive) return;
+
+  const race = liveData.find(r => r.raceId === currentRace);
+  if (!race || race.status !== 'RACE_IN_PROGRESS') {
+    setStatus('⏸️ Course pas encore lancée — suivi en attente', '#e88b00');
+    return;
+  }
+
+  const allRunners = [...liveRunners.male, ...liveRunners.female];
+  const positions = await Promise.all(
+    allRunners.map(r => fetchRunnerPosition(r.bib))
+  );
+
+  let updated = 0;
+  positions.forEach(pos => {
+    if (!pos || !pos.lat || !pos.lon) return;
+
+    const isFemale = liveRunners.female.some(r => r.bib === pos.bib);
+    const color = isFemale
+      ? Cesium.Color.fromCssColorString('#EF4135')
+      : Cesium.Color.fromCssColorString('#0055A4');
+
+    const position = Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, pos.alt + 30);
+    const existing = liveMarkers[pos.bib];
+
+    if (existing) {
+      existing.entity.position = position;
+      existing.entity.description = buildPopupHTML(existing, pos, isFemale);
+      existing.lastPosition = pos;
+    } else {
+      const runner = allRunners.find(r => r.bib === pos.bib);
+      if (!runner) return;
+
+      const entity = viewer.entities.add({
+        name: `${runner.firstName} ${runner.lastName}`,
+        position: position,
+        point: {
+          pixelSize: 14,
+          color: color,
+          outlineColor: Cesium.Color.WHITE,
+          outlineWidth: 3,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        },
+        label: {
+          text: `${runner.firstName} ${runner.lastName}`,
+          font: 'bold 11px Inter, sans-serif',
+          fillColor: Cesium.Color.WHITE,
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 3,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          pixelOffset: new Cesium.Cartesian2(0, -18),
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 40000)
+        },
+        description: buildPopupHTML(runner, pos, isFemale)
+      });
+
+      liveMarkers[pos.bib] = {
+        entity,
+        firstName: runner.firstName,
+        lastName: runner.lastName,
+        countryCode: runner.countryCode || runner.nationality,
+        gender: isFemale ? 'female' : 'male',
+        lastPosition: pos
+      };
+    }
+    updated++;
+  });
+
+  updateLiveCounter();
+  const time = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('ivLastUpdate').textContent = time;
+  document.getElementById('lcUpdate').textContent = time;
+
+  setStatus(`🟢 ${updated} coureurs suivis — MAJ ${time}`, '#00a854');
+}
+
+function buildPopupHTML(runner, pos, isFemale) {
+  const color = isFemale ? '#EF4135' : '#0055A4';
+  return `
+    <div style="font-family:Inter,sans-serif;padding:10px;min-width:200px">
+      <div style="font-weight:800;font-size:14px;color:${color};margin-bottom:6px">
+        ${runner.firstName} ${runner.lastName}
+      </div>
+      <div style="font-size:11px;color:#666;line-height:1.6">
+        <div>🏷️ Dossard <strong>#${pos.bib}</strong></div>
+        <div>🌍 ${runner.countryCode || '—'}</div>
+        <div>📍 ${pos.km} km · ${pos.name}</div>
+        <div>🏆 Classement <strong>#${pos.rank}</strong></div>
+        <div>⏱️ ${pos.time ? new Date(pos.time).toLocaleTimeString('fr-FR') : '—'}</div>
+      </div>
+    </div>
+  `;
+}
+
+function updateLiveCounter() {
+  const maleCount = Object.values(liveMarkers).filter(m => m.gender === 'male').length;
+  const femaleCount = Object.values(liveMarkers).filter(m => m.gender === 'female').length;
+  document.getElementById('lcMale').textContent = maleCount;
+  document.getElementById('lcFemale').textContent = femaleCount;
+  document.getElementById('ivMale').textContent = maleCount;
+  document.getElementById('ivFemale').textContent = femaleCount;
+  document.getElementById('tbTracked').textContent = maleCount + femaleCount;
+}
+
+async function startLiveTracking() {
+  if (trackingActive) return;
+
+  setStatus('📥 Chargement des 20 premiers H/F…');
+  const [males, females] = await Promise.all([
+    fetchTopRunners(currentRace, 'MALE', TOP_N),
+    fetchTopRunners(currentRace, 'FEMALE', TOP_N)
+  ]);
+  liveRunners.male = males;
+  liveRunners.female = females;
+
+  console.log(`🎯 Suivi: ${males.length} H + ${females.length} F`);
+
+  trackingActive = true;
+  document.getElementById('liveCounter').classList.add('visible');
+  document.getElementById('ivTrackingStatus').textContent = 'Actif';
+  document.getElementById('ivTrackingStatus').style.color = 'var(--green)';
+
+  await updateLiveMarkers();
+
+  if (trackingTimer) clearInterval(trackingTimer);
+  trackingTimer = setInterval(updateLiveMarkers, TRACK_REFRESH_MS);
+
+  setStatus('🟢 Suivi en direct activé (refresh 30s)', '#00a854');
+}
+
+function stopLiveTracking() {
+  trackingActive = false;
+  if (trackingTimer) clearInterval(trackingTimer);
+  trackingTimer = null;
+
+  document.getElementById('liveCounter').classList.remove('visible');
+  document.getElementById('ivTrackingStatus').textContent = 'Inactif';
+  document.getElementById('ivTrackingStatus').style.color = 'var(--text-1)';
+
+  Object.values(liveMarkers).forEach(m => viewer.entities.remove(m.entity));
+  liveMarkers = {};
+  updateLiveCounter();
+
+  setStatus('⏸️ Suivi en direct arrêté', '#e88b00');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDU
+   ═══════════════════════════════════════════════════════════ */
+function renderSidebar() {
+  const el = document.getElementById('sbList');
+  document.getElementById('sbCount').textContent = '5 courses · ' +
+    (liveData.length ? liveData.reduce((s,r) => s + (r.stats?.registered || 0), 0) + ' inscrits' : '—');
+
+  el.innerHTML = Object.entries(RACES).map(([code, info]) => {
+    const race = liveData.find(r => r.raceId === code);
+    const status = race ? (race.status === 'RACE_NOT_LAUNCHED' ? 'À venir' :
+                          race.status === 'RACE_IN_PROGRESS' ? '● LIVE' : 'Terminée') : '—';
+    const registered = race?.stats?.registered ?? '—';
+    return `
+      <div class="sb-item ${code === currentRace ? 'active' : ''}" data-race="${code}">
+        <div class="sb-item-h">
+          <span class="sb-item-icon" style="color:${info.color}">${info.icon}</span>
+          <span class="sb-item-name">${info.name}</span>
+        </div>
+        <div class="sb-item-meta">
+          <span class="${status === '● LIVE' ? 'live' : ''}">${status}</span>
+          <span>${info.dist} km</span>
+          <span>${registered} inscrits</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  el.querySelectorAll('.sb-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if (trackingActive && item.dataset.race !== currentRace) {
+        stopLiveTracking();
+        document.getElementById('trackBtn').innerHTML = '🟢 <span class="lbl">Suivi live</span>';
+        document.getElementById('trackBtn').classList.remove('active');
+      }
+      currentRace = item.dataset.race;
+      renderAll();
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(55.536, -21.115, 35000),
+        orientation: { heading: 0, pitch: Cesium.Math.toRadians(-35), roll: 0 },
+        duration: 1.5
+      });
+    });
+  });
+}
+
+function renderRightPanels() {
+  const race = liveData.find(r => r.raceId === currentRace);
+  const info = RACES[currentRace];
+
+  document.getElementById('activeIcon').textContent = info.icon;
+  document.getElementById('activeName').textContent = info.name;
+  document.getElementById('activeUrl').textContent = info.start + ' → Saint-Denis · ' + info.dist + ' km · ' + info.dplus;
+
+  document.getElementById('ivName').textContent = info.name;
+  document.getElementById('ivCode').textContent = info.code;
+  document.getElementById('ivDist').textContent = info.dist + ' km';
+  document.getElementById('ivDplus').textContent = info.dplus;
+  document.getElementById('ivStatus').textContent = race?.status || '—';
+
+  const s = race?.stats || {};
+  document.getElementById('gsRegistered').textContent = s.registered ?? '—';
+  document.getElementById('gsOnRace').textContent = s.onRace ?? 0;
+  document.getElementById('gsFinisher').textContent = s.finisher ?? 0;
+  document.getElementById('gsDnf').textContent = s.dnf ?? 0;
+
+  document.getElementById('stat-status').textContent = race?.status || '—';
+  document.getElementById('stat-registered').textContent = s.registered ?? '—';
+  document.getElementById('stat-onrace').textContent = s.onRace ?? 0;
+  document.getElementById('stat-finisher').textContent = s.finisher ?? 0;
+  document.getElementById('stat-dnf').textContent = s.dnf ?? 0;
+
+  document.getElementById('tbStatus').textContent = race?.status || '—';
+  document.getElementById('sysUpdate').textContent = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+}
+
+function renderRanking(containerId, countId, list, limit = TOP_N, raceId = null) {
+  const el = document.getElementById(containerId);
+  const countEl = document.getElementById(countId);
+
+  if (raceId && RACES[raceId]?.relays) {
+    el.innerHTML = `
+      <div style="padding:16px;text-align:center;color:var(--text-1);font-family:var(--font-mono);font-size:.75em;line-height:1.7">
+        <div style="font-size:2rem;margin-bottom:8px">🔁</div>
+        <strong style="color:var(--text-0);font-size:1.05em">Course en relais</strong><br>
+        Le Zembrocal Trail se court en équipes de 4.<br>
+        Classements disponibles par équipe,<br>
+        pas par coureur individuel.
+      </div>
+    `;
+    if (countEl) countEl.textContent = 'Relais';
+    return;
+  }
+
+  if (!list || !list.length) {
+    el.innerHTML = '<p style="color:var(--text-2);font-size:.75em;padding:8px;font-family:var(--font-mono)">Aucun coureur disponible.</p>';
+    if (countEl) countEl.textContent = '0';
+    return;
+  }
+
+  const runners = list.slice(0, limit);
+  if (countEl) countEl.textContent = `${list.length} coureurs`;
+
+  el.innerHTML = runners.map((r, i) => {
+    const cls = i === 0 ? 'p1' : i === 1 ? 'p2' : i === 2 ? 'p3' : '';
+    const isTracked = liveMarkers[r.bib] ? 'tracked' : '';
+    const pos = i + 1;
+    const livePos = liveMarkers[r.bib]?.lastPosition;
+    const liveInfo = livePos ? `<span class="pos-live">${livePos.km} km</span>` : '';
+    return `
+      <div class="rank-item ${cls} ${isTracked}">
+        <span class="medal">${pos}</span>
+        <span class="name">${r.firstName || '—'} ${r.lastName || '—'}</span>
+        ${liveInfo}
+        <span class="bib">#${r.bib || '—'}</span>
+        <span class="flag">${r.countryCode || '—'}</span>
+      </div>`;
+  }).join('');
+}
+
+async function renderAll() {
+  renderSidebar();
+  renderRightPanels();
+
+  const [scratchList, femaleList] = await Promise.all([
+    fetchTopRunners(currentRace, 'MALE', TOP_N),
+    fetchTopRunners(currentRace, 'FEMALE', TOP_N)
+  ]);
+
+  renderRanking('rank-scratch', 'count-scratch', scratchList, TOP_N, currentRace);
+  renderRanking('rank-female',  'count-female',  femaleList, TOP_N, currentRace);
+
+  const top = [...scratchList.slice(0, 8)];
+  document.getElementById('topList').innerHTML = top.length ? top.map((r, i) => `
+    <div class="intel-row">
+      <span class="k" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">
+        ${i+1}. ${r.firstName} ${r.lastName}
+      </span>
+      <span class="v amber">★ ${r.index || 0}</span>
+    </div>
+  `).join('') : '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>';
+
+  const cats = {};
+  scratchList.forEach(r => { cats[r.category] = (cats[r.category] || 0) + 1; });
+  const sorted = Object.entries(cats).sort((a,b) => b[1] - a[1]).slice(0, 8);
+  const total = sorted.reduce((s,[,c]) => s+c, 0) || 1;
+  document.getElementById('catList').innerHTML = sorted.length ? sorted.map(([cat, count]) => {
+    const pct = (count/total*100).toFixed(0);
+    return `
+      <div class="intel-row" style="flex-direction:column;align-items:stretch;gap:4px">
+        <div style="display:flex;justify-content:space-between">
+          <span class="k">${cat}</span>
+          <span class="v cyan">${count} · ${pct}%</span>
+        </div>
+        <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+    `;
+  }).join('') : '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>';
+}
+
+function setStatus(msg, color) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.style.color = color || 'var(--text-1)';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOGGLE INTEL
+   ═══════════════════════════════════════════════════════════ */
+function setupIntelToggle() {
+  const btn = document.getElementById('intelToggle');
+  const panel = document.getElementById('rightPanel');
+  const arrow = document.getElementById('intelArrow');
+
+  btn.addEventListener('click', () => {
+    panel.classList.toggle('open');
+    arrow.textContent = panel.classList.contains('open') ? '▲' : '▼';
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ÉVÉNEMENTS
+   ═══════════════════════════════════════════════════════════ */
+document.getElementById('loadBtn').addEventListener('click', loadAllTracks);
+document.getElementById('viewAllBtn').addEventListener('click', viewAll);
+
+document.getElementById('trackBtn').addEventListener('click', async function() {
+  if (trackingActive) {
+    stopLiveTracking();
+    this.innerHTML = '🟢 <span class="lbl">Suivi live</span>';
+    this.classList.remove('active');
+  } else {
+    this.disabled = true;
+    this.innerHTML = '⏳ <span class="lbl">Activation…</span>';
+    await startLiveTracking();
+    this.disabled = false;
+    this.innerHTML = '⏹️ <span class="lbl">Arrêter suivi</span>';
+    this.classList.add('active');
+  }
+});
+
+document.getElementById('toggleBtn').addEventListener('click', function() {
+  const allVisible = Object.values(trackVisibility).every(v => v);
+  const newState = !allVisible;
+  Object.keys(trackVisibility).forEach(raceId => {
+    trackVisibility[raceId] = newState;
+    if (trackDataSources[raceId]) trackDataSources[raceId].show = newState;
+    const row = document.querySelector(`.legend-row[data-race="${raceId}"]`);
+    if (row) row.classList.toggle('hidden', !newState);
+  });
+  this.innerHTML = newState ? '👁️ <span class="lbl">Masquer</span>' : '👁️ <span class="lbl">Afficher</span>';
+});
+
+document.querySelectorAll('.legend-row').forEach(row => {
+  row.addEventListener('click', () => toggleTrackVisibility(row.dataset.race));
+});
+
+setInterval(() => {
+  const d = new Date();
+  const p = n => n.toString().padStart(2, '0');
+  document.getElementById('tbTime').textContent =
+    p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}, 1000);
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════ */
+(async function init() {
+  if (typeof Cesium === 'undefined') {
+    setStatus('❌ CesiumJS non chargé', 'var(--fr-red)');
+    return;
+  }
+  setupIntelToggle();
+
+  try {
+    await initCesium();
+    setStatus('✓ Globe 3D prêt · 🧭 Boussole active', '#00a854');
+  } catch (e) {
+    console.error('❌ Cesium :', e);
+    setStatus('❌ Erreur Cesium : ' + e.message, 'var(--fr-red)');
+    return;
+  }
+
+  await loadTrackUrls();
+  await loadAllTracks();
+
+  await fetchLive();
+  setInterval(fetchLive, REFRESH_MS);
+})();
+</script>
+</body>
+</html>
