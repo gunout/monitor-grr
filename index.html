@@ -42,7 +42,6 @@ body{font-family:var(--font-sans);background:var(--bg-0);color:var(--text-0);
 ::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--fr-blue-light)}
 
-/* TOPBAR */
 .topbar{
   min-height:50px;background:var(--bg-1);
   display:flex;align-items:center;
@@ -78,7 +77,6 @@ body{font-family:var(--font-sans);background:var(--bg-0);color:var(--text-0);
 }
 #themeToggle:hover{background:var(--bg-3);border-color:var(--fr-blue-light);color:var(--fr-blue)}
 
-/* APP */
 .app{
   display:grid;grid-template-columns:240px 1fr 280px;
   height:calc(100vh - 53px);overflow:hidden;
@@ -94,7 +92,6 @@ body{font-family:var(--font-sans);background:var(--bg-0);color:var(--text-0);
 .app.hide-right .right{opacity:0;pointer-events:none;overflow:hidden}
 .app.hide-rankings .stats-grid,.app.hide-rankings .rank-grid{display:none}
 
-/* SIDEBAR GAUCHE */
 .sidebar{background:var(--bg-1);border-right:1px solid var(--border);
   display:flex;flex-direction:column;overflow:hidden;min-height:0;transition:opacity 0.3s}
 .sb-head{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg-2);flex-shrink:0}
@@ -124,7 +121,6 @@ body{font-family:var(--font-sans);background:var(--bg-0);color:var(--text-0);
   color:var(--text-2);margin-top:2px}
 .sb-item-meta .live{color:var(--green);font-weight:700}
 
-/* CENTRE */
 .center{background:var(--bg-0);display:flex;flex-direction:column;overflow:hidden;min-height:0}
 
 .work-bar{padding:10px 14px;background:var(--bg-1);border-bottom:1px solid var(--border);
@@ -158,7 +154,6 @@ body{font-family:var(--font-sans);background:var(--bg-0);color:var(--text-0);
 .wb-btn.gray.active{background:var(--fr-blue);color:#fff;border-color:var(--fr-blue)}
 .wb-sep{width:1px;height:20px;background:var(--border);margin:0 3px}
 
-/* CARTE */
 #cesiumContainer{flex:1;position:relative;overflow:hidden;background:var(--bg-0);min-height:0}
 
 .legend {
@@ -195,124 +190,57 @@ html.dark .legend { background:rgba(15,20,25,.95); }
 .legend-row.hidden { opacity:.35; text-decoration:line-through; }
 .legend-line { display:inline-block; width:28px; height:4px; border-radius:2px; flex-shrink:0 }
 
-/* BOUSSOLE */
 .compass-container {
-  position: absolute;
-  top: 90px;
-  right: 20px;
-  z-index: 999;
-  width: 80px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
+  position: absolute; top: 90px; right: 20px; z-index: 999;
+  width: 80px; display: flex; flex-direction: column; gap: 8px; align-items: center;
 }
-
 .compass {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.96);
-  backdrop-filter: blur(12px);
-  border: 2px solid var(--border);
-  box-shadow: var(--shadow-lg);
-  cursor: grab;
-  position: relative;
-  transition: box-shadow 0.2s;
-  user-select: none;
+  width: 70px; height: 70px; border-radius: 50%;
+  background: rgba(255,255,255,.96); backdrop-filter: blur(12px);
+  border: 2px solid var(--border); box-shadow: var(--shadow-lg);
+  cursor: grab; position: relative; transition: box-shadow 0.2s; user-select: none;
 }
 html.dark .compass { background: rgba(15,20,25,.95); }
-.compass:active {
-  cursor: grabbing;
-  box-shadow: 0 0 0 3px rgba(0,85,164,.3);
-}
-.compass::before {
-  content: '';
-  position: absolute;
-  inset: 6px;
-  border-radius: 50%;
-  border: 1px dashed var(--border);
-}
+.compass:active { cursor: grabbing; box-shadow: 0 0 0 3px rgba(0,85,164,.3); }
+.compass::before { content: ''; position: absolute; inset: 6px; border-radius: 50%; border: 1px dashed var(--border); }
 .compass-needle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 30px;
-  margin-left: -2px;
-  margin-top: -30px;
-  transform-origin: 50% 100%;
-  transition: transform 0.15s ease-out;
+  position: absolute; top: 50%; left: 50%; width: 4px; height: 30px;
+  margin-left: -2px; margin-top: -30px;
+  transform-origin: 50% 100%; transition: transform 0.15s ease-out;
 }
 .compass-needle::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 50%;
-  background: var(--fr-red);
-  border-radius: 2px 2px 0 0;
+  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+  background: var(--fr-red); border-radius: 2px 2px 0 0;
 }
 .compass-needle::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0;
-  width: 100%; height: 50%;
-  background: var(--fr-blue);
-  border-radius: 0 0 2px 2px;
+  content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 50%;
+  background: var(--fr-blue); border-radius: 0 0 2px 2px;
 }
 .compass-label {
-  position: absolute;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 800;
-  color: var(--text-0);
-  cursor: pointer;
-  padding: 2px;
-  transition: color 0.2s;
+  position: absolute; font-family: var(--font-mono); font-size: 9px; font-weight: 800;
+  color: var(--text-0); cursor: pointer; padding: 2px; transition: color 0.2s;
 }
 .compass-label:hover { color: var(--fr-blue); }
 .compass-label.n { top: 4px; left: 50%; transform: translateX(-50%); color: var(--fr-red); }
 .compass-label.s { bottom: 4px; left: 50%; transform: translateX(-50%); }
 .compass-label.e { right: 5px; top: 50%; transform: translateY(-50%); }
 .compass-label.w { left: 5px; top: 50%; transform: translateY(-50%); }
-
 .compass-reset {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.96);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--text-1);
-  transition: all 0.2s;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,.96); backdrop-filter: blur(12px);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px; color: var(--text-1); transition: all 0.2s;
 }
 html.dark .compass-reset { background: rgba(15,20,25,.95); }
-.compass-reset:hover {
-  background: var(--fr-blue);
-  color: #fff;
-  border-color: var(--fr-blue);
-  transform: rotate(-90deg);
-}
+.compass-reset:hover { background: var(--fr-blue); color: #fff; border-color: var(--fr-blue); transform: rotate(-90deg); }
 .compass-angle {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-1);
-  background: rgba(255,255,255,.96);
-  padding: 3px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  white-space: nowrap;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--text-1); background: rgba(255,255,255,.96);
+  padding: 3px 10px; border-radius: 10px; border: 1px solid var(--border); white-space: nowrap;
 }
 html.dark .compass-angle { background: rgba(15,20,25,.95); }
 
-/* Carte live counter */
 .live-counter {
   position:absolute; top:16px; right:16px; z-index:999;
   background:rgba(255,255,255,.96); backdrop-filter:blur(12px);
@@ -333,7 +261,6 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
 .live-counter .lc-count { font-weight:700; color:var(--text-0); }
 .live-counter .lc-label { color:var(--text-2); }
 
-/* STATS */
 .stats-grid {
   display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
   gap:10px; padding:10px 14px;
@@ -347,23 +274,19 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
   box-shadow:var(--shadow);
 }
 .stat-card::before {
-  content:''; position:absolute; top:0; left:0;
-  width:100%; height:3px;
+  content:''; position:absolute; top:0; left:0; width:100%; height:3px;
   background:linear-gradient(90deg,var(--fr-blue),var(--fr-white),var(--fr-red));
-  transform:scaleX(0); transform-origin:left;
-  transition:transform .3s;
+  transform:scaleX(0); transform-origin:left; transition:transform .3s;
 }
 .stat-card:hover { transform:translateY(-2px); border-color:var(--fr-blue-light); box-shadow:var(--shadow-md); }
 .stat-card:hover::before { transform:scaleX(1); }
 .stat-icon { font-size:1.3rem; margin-bottom:6px; display:block; }
 .stat-label {
-  font-size:9px; text-transform:uppercase;
-  letter-spacing:1.3px; color:var(--text-2);
+  font-size:9px; text-transform:uppercase; letter-spacing:1.3px; color:var(--text-2);
   font-weight:700; margin-bottom:6px; font-family:var(--font-mono);
 }
 .stat-value {
-  font-family:var(--font-mono);
-  font-size:1.5rem; font-weight:800;
+  font-family:var(--font-mono); font-size:1.5rem; font-weight:800;
   color:var(--text-0); line-height:1;
 }
 .stat-value.green { color:var(--green); }
@@ -371,7 +294,6 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
 .stat-value.red { color:var(--fr-red); }
 .stat-value.blue { color:var(--fr-blue); }
 
-/* CLASSEMENTS */
 .rank-grid {
   display:grid; grid-template-columns:1fr 1fr;
   gap:12px; padding:10px 14px;
@@ -382,8 +304,7 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
 .rank-panel {
   background:var(--bg-1); border:1px solid var(--border);
   border-radius:10px; padding:14px;
-  display:flex; flex-direction:column;
-  box-shadow:var(--shadow);
+  display:flex; flex-direction:column; box-shadow:var(--shadow);
 }
 .rank-panel-header {
   display:flex; align-items:center; gap:10px;
@@ -392,8 +313,7 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
 }
 .rank-panel-header .icon {
   width:32px; height:32px; border-radius:8px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:1rem;
+  display:flex; align-items:center; justify-content:center; font-size:1rem;
 }
 .rank-panel.scratch .icon { background:rgba(0,85,164,.15); color:var(--fr-blue); }
 .rank-panel.female .icon { background:rgba(239,65,53,.15); color:var(--fr-red); }
@@ -403,14 +323,12 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
   color:var(--text-0); font-family:var(--font-mono);
 }
 .rank-panel-header .count {
-  margin-left:auto;
-  font-size:.7rem; color:var(--text-2);
+  margin-left:auto; font-size:.7rem; color:var(--text-2);
   font-weight:600; font-family:var(--font-mono);
 }
 .rank-list {
   display:flex; flex-direction:column; gap:5px;
-  max-height:360px; overflow-y:auto;
-  padding-right:4px;
+  max-height:360px; overflow-y:auto; padding-right:4px;
 }
 .rank-list::-webkit-scrollbar { width:5px; }
 .rank-list::-webkit-scrollbar-track { background:var(--bg-2); border-radius:3px; }
@@ -419,11 +337,8 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
 
 .rank-item {
   display:flex; align-items:center; gap:10px;
-  padding:8px 10px;
-  background:var(--bg-2);
-  border-radius:8px;
-  border-left:3px solid var(--border);
-  transition:all .15s; flex-shrink:0;
+  padding:8px 10px; background:var(--bg-2); border-radius:8px;
+  border-left:3px solid var(--border); transition:all .15s; flex-shrink:0;
 }
 .rank-item:hover { background:var(--bg-3); transform:translateX(3px); }
 .rank-item.p1 { border-left-color:var(--amber); background:rgba(232,139,0,.08); }
@@ -442,35 +357,28 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
 .rank-item.p3 .medal { background:linear-gradient(135deg,var(--fr-red),#b32d24); color:#fff; }
 .rank-item .name {
   flex:1; font-weight:700; font-size:.8rem;
-  color:var(--text-0);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  color:var(--text-0); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .rank-item .bib {
-  font-family:var(--font-mono);
-  font-size:.68rem; color:var(--text-2);
+  font-family:var(--font-mono); font-size:.68rem; color:var(--text-2);
   font-weight:600; flex-shrink:0;
 }
 .rank-item .flag {
-  font-size:.72rem; font-weight:700;
-  color:var(--text-2); flex-shrink:0;
+  font-size:.72rem; font-weight:700; color:var(--text-2); flex-shrink:0;
 }
 .rank-item .pos-live {
-  font-family:var(--font-mono);
-  font-size:.65rem; color:var(--green);
+  font-family:var(--font-mono); font-size:.65rem; color:var(--green);
   font-weight:700; flex-shrink:0;
 }
 
 #status {
   text-align:center; padding:12px;
   background:var(--bg-1); border-top:1px solid var(--border);
-  color:var(--text-1);
-  font-size:.75rem; font-weight:600;
+  color:var(--text-1); font-size:.75rem; font-weight:600;
   letter-spacing:.5px; text-transform:uppercase;
-  font-family:var(--font-mono);
-  flex-shrink:0;
+  font-family:var(--font-mono); flex-shrink:0;
 }
 
-/* SIDEBAR DROITE */
 .right{background:var(--bg-1);border-left:1px solid var(--border);
   display:flex;flex-direction:column;overflow:hidden;min-height:0;transition:opacity 0.3s}
 .rs-head{padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg-2);
@@ -508,7 +416,6 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
   align-items:center;justify-content:center;gap:8px}
 .intel-toggle:hover{background:var(--bg-3)}
 
-/* FOOTER */
 footer {
   text-align:center; padding:16px 20px;
   color:var(--text-2); font-size:.72rem;
@@ -527,7 +434,6 @@ footer .devise-fr {
   background-clip:text;
 }
 
-/* RESPONSIVE */
 @media(max-width:900px){
   body{overflow-y:auto;overflow-x:hidden}
   .app{display:flex;flex-direction:column;height:auto;min-height:calc(100vh - 53px);
@@ -630,7 +536,6 @@ footer .devise-fr {
         <div class="legend-row" data-race="MTR"><span class="legend-line" style="background:#fc8230;"></span>Métis Trail (51 km)</div>
       </div>
 
-      <!-- BOUSSOLE -->
       <div class="compass-container" id="compassContainer">
         <div class="compass" id="compass" title="Glisser pour tourner · Double-clic pour reset">
           <span class="compass-label n" data-dir="N">N</span>
@@ -866,6 +771,7 @@ const TENANT = 'grandraid-reunion_2026';
 const API_LIVE = 'https://api.v3.livetrail.net/api/events/races/lives';
 const API_RACES = 'https://api.v3.livetrail.net/api/events/races/';
 const API_RUNNERS = 'https://api.v3.livetrail.net/api/events/runners';
+const API_POINTS = 'https://api.v3.livetrail.net/api/events/points?raceId=';
 const REFRESH_MS = 60000;
 const TRACK_REFRESH_MS = 30000;
 const TOP_N = 20;
@@ -879,15 +785,14 @@ const RACES = {
 };
 
 /* ═══════════════════════════════════════════════════════════
-   POINTS DE TRACÉ (remplace CHECKPOINTS)
+   POINTS DE TRACÉ (pour interpolation)
    ═══════════════════════════════════════════════════════════ */
-let TRACK_POINTS = {
-  GRR: [],
-  MAS: [],
-  TDB: [],
-  ZEM: [],
-  MTR: []
-};
+let TRACK_POINTS = { GRR: [], MAS: [], TDB: [], ZEM: [], MTR: [] };
+
+/* ═══════════════════════════════════════════════════════════
+   POINTS DE PASSAGE (pour mapping pointId → km/lat/lon)
+   ═══════════════════════════════════════════════════════════ */
+let RACE_POINTS = { GRR: {}, MAS: {}, TDB: {}, ZEM: {}, MTR: {} };
 
 let TRACKS = { GRR: null, MAS: null, TDB: null, ZEM: null, MTR: null };
 let viewer = null;
@@ -897,7 +802,7 @@ let trackDataSources = {};
 let trackVisibility = { GRR: true, MAS: true, TDB: true, ZEM: true, MTR: true };
 
 /* ═══════════════════════════════════════════════════════════
-   SUIVI EN DIRECT (API uniquement — PAS de simulation)
+   SUIVI EN DIRECT — API UNIQUEMENT
    ═══════════════════════════════════════════════════════════ */
 let liveMarkers = {};
 let liveRunners = { male: [], female: [] };
@@ -1022,11 +927,7 @@ function setupCompass() {
     const deltaX = e.clientX - startX;
     const newHeading = startHeading - deltaX * 0.008;
     viewer.camera.setView({
-      orientation: {
-        heading: newHeading,
-        pitch: viewer.camera.pitch,
-        roll: 0
-      }
+      orientation: { heading: newHeading, pitch: viewer.camera.pitch, roll: 0 }
     });
     updateCompass();
   });
@@ -1067,11 +968,7 @@ function setupCompass() {
       const targetHeading = Cesium.Math.toRadians(headings[dir] || 0);
       viewer.camera.flyTo({
         destination: viewer.camera.position,
-        orientation: {
-          heading: targetHeading,
-          pitch: viewer.camera.pitch,
-          roll: 0
-        },
+        orientation: { heading: targetHeading, pitch: viewer.camera.pitch, roll: 0 },
         duration: 0.8
       });
     });
@@ -1087,16 +984,12 @@ function setupCompass() {
   function resetView() {
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(55.536, -21.115, 35000),
-      orientation: {
-        heading: 0,
-        pitch: Cesium.Math.toRadians(-35),
-        roll: 0
-      },
+      orientation: { heading: 0, pitch: Cesium.Math.toRadians(-35), roll: 0 },
       duration: 1
     });
   }
 
-  console.log('🧭 Boussole activée — glisser pour tourner · double-clic pour reset');
+  console.log('🧭 Boussole activée');
 }
 
 document.addEventListener('keydown', (e) => {
@@ -1117,7 +1010,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ═══════════════════════════════════════════════════════════
-   TRACÉS + POINTS
+   TRACÉS + POINTS DE PASSAGE
    ═══════════════════════════════════════════════════════════ */
 async function loadTrackUrls() {
   setStatus('🔍 Récupération des URLs de tracés…');
@@ -1166,12 +1059,7 @@ async function loadTrack(raceId) {
             if (typeof lon === 'number' && typeof lat === 'number' &&
                 lon > -180 && lon < 180 && lat > -90 && lat < 90) {
               coordinates.push([lon, lat]);
-              points.push({
-                km: distM / 1000,
-                alt: altM,
-                lon, lat,
-                terrain
-              });
+              points.push({ km: distM / 1000, alt: altM, lon, lat, terrain });
             }
           }
         });
@@ -1179,10 +1067,9 @@ async function loadTrack(raceId) {
     }
     if (!coordinates.length) throw new Error('Aucune coordonnée');
 
-    // Trier par km croissant (une seule fois)
     points.sort((a, b) => a.km - b.km);
     TRACK_POINTS[raceId] = points;
-    console.log(`📍 ${raceId} : ${points.length} points indexés (${points[points.length-1].km.toFixed(1)} km)`);
+    console.log(`📍 ${raceId} : ${points.length} points de tracé (${points[points.length-1].km.toFixed(1)} km)`);
 
     const geojson = {
       type: 'Feature',
@@ -1216,6 +1103,41 @@ async function loadTrack(raceId) {
   } catch (e) {
     console.error('❌ Erreur ' + raceId, e);
     return false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CHARGEMENT DES POINTS DE PASSAGE (pointId → km/lat/lon)
+   ═══════════════════════════════════════════════════════════ */
+async function loadRacePoints(raceId) {
+  try {
+    const r = await fetch(API_POINTS + raceId, { headers: { 'X-Tenant': TENANT } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const points = await r.json();
+
+    const map = {};
+    points.forEach(p => {
+      map[p.pointId] = {
+        pointId: p.pointId,
+        km: (p.distance || 0) / 1000,
+        lat: p.lat,
+        lon: p.lon,
+        alt: p.altitude || 0,
+        name: p.name || p.shortName || `Point ${p.pointId}`
+      };
+    });
+    RACE_POINTS[raceId] = map;
+    console.log(`📌 ${raceId} : ${points.length} points de passage indexés`);
+    return points.length;
+  } catch (e) {
+    console.error(`❌ points ${raceId}:`, e);
+    return 0;
+  }
+}
+
+async function loadAllRacePoints() {
+  for (const raceId of Object.keys(RACE_POINTS)) {
+    await loadRacePoints(raceId);
   }
 }
 
@@ -1264,12 +1186,10 @@ function getPositionFromTrack(raceId, km) {
   const pts = TRACK_POINTS[raceId];
   if (!pts || !pts.length) return null;
 
-  // Clamp aux bornes
   const minKm = pts[0].km;
   const maxKm = pts[pts.length - 1].km;
   km = Math.max(minKm, Math.min(maxKm, km));
 
-  // Recherche dichotomique fiable (tri garanti au chargement)
   let lo = 0, hi = pts.length - 1;
   while (lo < hi) {
     const mid = Math.floor((lo + hi) / 2);
@@ -1277,7 +1197,6 @@ function getPositionFromTrack(raceId, km) {
     else hi = mid;
   }
 
-  // Interpolation linéaire entre pts[lo-1] et pts[lo]
   const p2 = pts[lo];
   const p1 = pts[Math.max(0, lo - 1)];
   if (!p1 || !p2) return p2;
@@ -1326,56 +1245,38 @@ async function fetchTopRunners(raceId, sex = 'MALE', limit = TOP_N) {
 
 /* ═══════════════════════════════════════════════════════════
    SUIVI EN DIRECT — API UNIQUEMENT
-   Tente plusieurs endpoints, retourne null si aucun ne marche
+   Utilise /runners/{bib} + mapping pointId → position
    ═══════════════════════════════════════════════════════════ */
-const LIVE_ENDPOINTS = [
-  (bib) => `https://api.v3.livetrail.net/api/events/runners/${bib}/lives`,
-  (bib) => `https://api.v3.livetrail.net/api/events/runners/${bib}/live`,
-  (bib) => `https://api.v3.livetrail.net/api/events/runners/${bib}/passings`,
-  (bib) => `https://api.v3.livetrail.net/api/events/runners/${bib}`
-];
-
 async function tryFetchRunnerPosition(bib) {
-  for (const build of LIVE_ENDPOINTS) {
-    try {
-      const r = await fetch(build(bib), { headers: { 'X-Tenant': TENANT } });
-      if (!r.ok) continue;
-      const d = await r.json();
+  try {
+    const r = await fetch(`https://api.v3.livetrail.net/api/events/runners/${bib}`, {
+      headers: { 'X-Tenant': TENANT }
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
 
-      let passings = d.passings || d.lives || d.points || [];
-      if (!passings.length && Array.isArray(d)) passings = d;
-      if (!passings.length) continue;
+    const lastPointId = d.lastPassage?.pointId;
+    if (lastPointId == null) return null;
 
-      const sorted = [...passings].sort((a, b) => {
-        const ak = a.km ?? a.distance ?? a.pointId ?? 0;
-        const bk = b.km ?? b.distance ?? b.pointId ?? 0;
-        return bk - ak;
-      });
-      const last = sorted[0];
+    const cp = RACE_POINTS[currentRace]?.[lastPointId];
+    if (!cp || cp.lat == null || cp.lon == null) return null;
 
-      const km = last.km ?? last.distance;
-      if (km == null) continue;
-
-      const pos = getPositionFromTrack(currentRace, km);
-      if (!pos) continue;
-
-      return {
-        bib,
-        km,
-        name: last.name || last.pointName || `km ${km}`,
-        time: last.time || last.passingTime,
-        rank: last.rank || 0,
-        lat: pos.lat,
-        lon: pos.lon,
-        alt: pos.alt,
-        terrain: pos.terrain,
-        status: d.status
-      };
-    } catch (e) {
-      // continue vers le prochain endpoint
-    }
+    // Position exacte au dernier point de passage
+    return {
+      bib,
+      km: cp.km,
+      name: cp.name,
+      time: d.lastPassage.dateTime,
+      rank: d.ranking?.scratch || 0,
+      lat: cp.lat,
+      lon: cp.lon,
+      alt: cp.alt,
+      status: d.status,
+      nextPointId: d.nextPassage?.pointId
+    };
+  } catch (e) {
+    return null;
   }
-  return null;
 }
 
 async function updateLiveMarkers() {
@@ -1393,7 +1294,6 @@ async function updateLiveMarkers() {
     return;
   }
 
-  // ✅ API uniquement — pas de simulation
   const positions = (await Promise.all(
     allRunners.map(r => tryFetchRunnerPosition(r.bib))
   )).filter(Boolean);
@@ -1480,7 +1380,8 @@ function buildPopupHTML(runner, pos, isFemale) {
       <div style="font-size:11px;color:#666;line-height:1.6">
         <div>🏷️ Dossard <strong>#${pos.bib}</strong></div>
         <div>🌍 ${runner.countryCode || '—'}</div>
-        <div>📍 ${pos.km} km · ${pos.alt ? Math.round(pos.alt) + ' m' : '—'}</div>
+        <div>📍 ${pos.km.toFixed(1)} km · ${pos.name}</div>
+        <div>⛰️ Altitude ${Math.round(pos.alt)} m</div>
         <div>🏆 Classement <strong>#${pos.rank}</strong></div>
         <div>⏱️ ${pos.time ? new Date(pos.time).toLocaleTimeString('fr-FR') : '—'}</div>
       </div>
@@ -1501,13 +1402,16 @@ function updateLiveCounter() {
 async function startLiveTracking() {
   if (trackingActive) return;
 
-  // Vérifier qu'on a bien les points de tracé
   if (!TRACK_POINTS[currentRace] || !TRACK_POINTS[currentRace].length) {
     setStatus('⏳ Chargement des tracés requis pour le suivi…', '#e88b00');
     await loadAllTracks();
   }
 
-  // Zembrocal : pas de suivi individuel
+  if (!Object.keys(RACE_POINTS[currentRace] || {}).length) {
+    setStatus('⏳ Chargement des points de passage…', '#e88b00');
+    await loadRacePoints(currentRace);
+  }
+
   if (RACES[currentRace]?.relays) {
     setStatus('🔁 Zembrocal en relais — suivi individuel indisponible', '#e88b00');
     return;
@@ -1568,7 +1472,8 @@ function renderSidebar() {
   el.innerHTML = Object.entries(RACES).map(([code, info]) => {
     const race = liveData.find(r => r.raceId === code);
     const status = race ? (race.status === 'RACE_NOT_LAUNCHED' ? 'À venir' :
-                          race.status === 'RACE_IN_PROGRESS' ? '● LIVE' : 'Terminée') : '—';
+                          race.status === 'RACE_IN_PROGRESS' ? '● LIVE' :
+                          race.status === 'STARTED' ? '● LIVE' : 'Terminée') : '—';
     const registered = race?.stats?.registered ?? '—';
     return `
       <div class="sb-item ${code === currentRace ? 'active' : ''}" data-race="${code}">
@@ -1665,7 +1570,7 @@ function renderRanking(containerId, countId, list, limit = TOP_N, raceId = null)
     const isTracked = liveMarkers[r.bib] ? 'tracked' : '';
     const pos = i + 1;
     const livePos = liveMarkers[r.bib]?.lastPosition;
-    const liveInfo = livePos ? `<span class="pos-live">${livePos.km} km</span>` : '';
+    const liveInfo = livePos ? `<span class="pos-live">${livePos.km.toFixed(0)} km</span>` : '';
     return `
       <div class="rank-item ${cls} ${isTracked}">
         <span class="medal">${pos}</span>
@@ -1723,9 +1628,6 @@ function setStatus(msg, color) {
   el.style.color = color || 'var(--text-1)';
 }
 
-/* ═══════════════════════════════════════════════════════════
-   TOGGLE INTEL
-   ═══════════════════════════════════════════════════════════ */
 function setupIntelToggle() {
   const btn = document.getElementById('intelToggle');
   const panel = document.getElementById('rightPanel');
@@ -1807,7 +1709,7 @@ setInterval(() => {
 
   await loadTrackUrls();
   await loadAllTracks();
-
+  await loadAllRacePoints();   // ✅ NOUVEAU : charge les points de passage
   await fetchLive();
   setInterval(fetchLive, REFRESH_MS);
 })();
