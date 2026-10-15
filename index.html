@@ -785,14 +785,7 @@ const RACES = {
   MTR: { name: 'Métis Trail',        code: 'MTR', dist: 51,  dplus: '2 500 m',  start: 'Saint-Paul',    startLon: 55.271,   startLat: -21.010,   color: '#fc8230', icon: '🌅', relays: false }
 };
 
-/* ═══════════════════════════════════════════════════════════
-   POINTS DE TRACÉ (pour interpolation)
-   ═══════════════════════════════════════════════════════════ */
 let TRACK_POINTS = { GRR: [], MAS: [], TDB: [], ZEM: [], MTR: [] };
-
-/* ═══════════════════════════════════════════════════════════
-   POINTS DE PASSAGE (pour mapping pointId → km/lat/lon)
-   ═══════════════════════════════════════════════════════════ */
 let RACE_POINTS = { GRR: {}, MAS: {}, TDB: {}, ZEM: {}, MTR: {} };
 
 let TRACKS = { GRR: null, MAS: null, TDB: null, ZEM: null, MTR: null };
@@ -809,6 +802,9 @@ let liveMarkers = {};
 let liveRunners = { male: [], female: [] };
 let trackingActive = false;
 let trackingTimer = null;
+
+/* Cache du classement pour éviter les appels répétés */
+let rankingCache = { GRR: {}, MAS: {}, TDB: {}, ZEM: {}, MTR: {} };
 
 /* ═══════════════════════════════════════════════════════════
    CESIUM
@@ -1108,7 +1104,7 @@ async function loadTrack(raceId) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CHARGEMENT DES POINTS DE PASSAGE (pointId → km/lat/lon)
+   CHARGEMENT DES POINTS DE PASSAGE
    ═══════════════════════════════════════════════════════════ */
 async function loadRacePoints(raceId) {
   try {
@@ -1228,6 +1224,69 @@ async function fetchLive() {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   ENRICHISSEMENT DES RUNNERS AVEC LEUR CLASSEMENT RÉEL
+   Le /runners ne renvoie pas le classement. On appelle
+   /runners/{bib} pour chaque coureur (avec cache).
+   ═══════════════════════════════════════════════════════════ */
+async function fetchRunnerDetail(bib) {
+  try {
+    const r = await fetch(`${API_RUNNERS}/${bib}`, {
+      headers: { 'X-Tenant': TENANT }
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function enrichRunnersWithRanking(runners, raceId) {
+  if (!runners.length) return runners;
+
+  const enriched = await Promise.all(runners.map(async r => {
+    // Vérifier le cache
+    const cached = rankingCache[raceId]?.[r.bib];
+    if (cached && (Date.now() - cached._ts) < 60000) {
+      return { ...r, ...cached };
+    }
+
+    const detail = await fetchRunnerDetail(r.bib);
+    if (!detail) return r;
+
+    const enrichedRunner = {
+      ...r,
+      ranking: detail.ranking,
+      lastPassage: detail.lastPassage,
+      nextPassage: detail.nextPassage,
+      raceTime: detail.raceTime,
+      diffToFirst: detail.diffToFirst,
+      runnerStatus: detail.status,
+      _ts: Date.now()
+    };
+
+    // Sauvegarder dans le cache
+    if (!rankingCache[raceId]) rankingCache[raceId] = {};
+    rankingCache[raceId][r.bib] = enrichedRunner;
+
+    return enrichedRunner;
+  }));
+
+  return enriched;
+}
+
+/* Tri par classement réel (scratch pour les hommes, sex pour les femmes) */
+function sortByRanking(runners, sex) {
+  return [...runners].sort((a, b) => {
+    const rankA = a.ranking?.scratch ?? 99999;
+    const rankB = b.ranking?.scratch ?? 99999;
+    return rankA - rankB;
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FETCH TOP RUNNERS (avec classement réel)
+   ═══════════════════════════════════════════════════════════ */
 async function fetchTopRunners(raceId, sex = 'MALE', limit = TOP_N) {
   if (RACES[raceId]?.relays) return [];
   try {
@@ -1236,8 +1295,12 @@ async function fetchTopRunners(raceId, sex = 'MALE', limit = TOP_N) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     const runners = d.runners || [];
-    runners.sort((a, b) => (b.index || 0) - (a.index || 0));
-    return runners;
+
+    // ✅ Enrichir avec le classement réel
+    const enriched = await enrichRunnersWithRanking(runners, raceId);
+
+    // ✅ Trier par classement scratch
+    return sortByRanking(enriched, sex);
   } catch (e) {
     console.error(`❌ runners ${raceId} ${sex}`, e);
     return [];
@@ -1246,12 +1309,10 @@ async function fetchTopRunners(raceId, sex = 'MALE', limit = TOP_N) {
 
 /* ═══════════════════════════════════════════════════════════
    SUIVI EN DIRECT — API UNIQUEMENT + INTERPOLATION
-   Utilise /runners/{bib} + mapping pointId → position
-   Interpole entre lastPassage et nextPassage selon le temps
    ═══════════════════════════════════════════════════════════ */
 async function tryFetchRunnerPosition(bib) {
   try {
-    const r = await fetch(`https://api.v3.livetrail.net/api/events/runners/${bib}`, {
+    const r = await fetch(`${API_RUNNERS}/${bib}`, {
       headers: { 'X-Tenant': TENANT }
     });
     if (!r.ok) return null;
@@ -1263,7 +1324,6 @@ async function tryFetchRunnerPosition(bib) {
     const cpLast = RACE_POINTS[currentRace]?.[lastPointId];
     if (!cpLast || cpLast.lat == null || cpLast.lon == null) return null;
 
-    // ✅ INTERPOLATION entre lastPassage et nextPassage
     const nextPointId = d.nextPassage?.pointId;
     const cpNext = nextPointId != null ? RACE_POINTS[currentRace]?.[nextPointId] : null;
 
@@ -1303,6 +1363,7 @@ async function tryFetchRunnerPosition(bib) {
       name,
       time: d.lastPassage.dateTime,
       rank: d.ranking?.scratch || 0,
+      rankSex: d.ranking?.sex || 0,
       lat,
       lon,
       alt,
@@ -1409,6 +1470,7 @@ async function updateLiveMarkers() {
 
 function buildPopupHTML(runner, pos, isFemale) {
   const color = isFemale ? '#EF4135' : '#0055A4';
+  const rankLabel = pos.rank ? `#${pos.rank}` : '—';
   return `
     <div style="font-family:Inter,sans-serif;padding:10px;min-width:220px">
       <div style="font-weight:800;font-size:14px;color:${color};margin-bottom:6px">
@@ -1419,7 +1481,7 @@ function buildPopupHTML(runner, pos, isFemale) {
         <div>🌍 ${runner.countryCode || '—'}</div>
         <div>📍 <strong>${pos.km.toFixed(1)} km</strong> · ${pos.name}</div>
         <div>⛰️ Altitude ${Math.round(pos.alt)} m</div>
-        <div>🏆 Classement <strong>#${pos.rank}</strong></div>
+        <div>🏆 Classement <strong>${rankLabel}</strong></div>
         <div>⏱️ ${pos.time ? new Date(pos.time).toLocaleTimeString('fr-FR') : '—'}</div>
       </div>
     </div>
@@ -1604,12 +1666,13 @@ function renderRanking(containerId, countId, list, limit = TOP_N, raceId = null)
   el.innerHTML = runners.map((r, i) => {
     const cls = i === 0 ? 'p1' : i === 1 ? 'p2' : i === 2 ? 'p3' : '';
     const isTracked = liveMarkers[r.bib] ? 'tracked' : '';
-    const pos = i + 1;
+    // ✅ Utiliser le VRAI classement
+    const realRank = r.ranking?.scratch || r.ranking?.sex || (i + 1);
     const livePos = liveMarkers[r.bib]?.lastPosition;
     const liveInfo = livePos ? `<span class="pos-live">${livePos.km.toFixed(0)} km</span>` : '';
     return `
       <div class="rank-item ${cls} ${isTracked}">
-        <span class="medal">${pos}</span>
+        <span class="medal">${realRank}</span>
         <span class="name">${r.firstName || '—'} ${r.lastName || '—'}</span>
         ${liveInfo}
         <span class="bib">#${r.bib || '—'}</span>
@@ -1634,9 +1697,9 @@ async function renderAll() {
   document.getElementById('topList').innerHTML = top.length ? top.map((r, i) => `
     <div class="intel-row">
       <span class="k" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">
-        ${i+1}. ${r.firstName} ${r.lastName}
+        ${r.ranking?.scratch || (i+1)}. ${r.firstName} ${r.lastName}
       </span>
-      <span class="v amber">★ ${r.index || 0}</span>
+      <span class="v amber">${r.ranking?.scratch ? '★ ' + r.ranking.scratch : '—'}</span>
     </div>
   `).join('') : '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>';
 
