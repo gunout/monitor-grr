@@ -880,7 +880,6 @@ const RACES = {
 
 /* ═══════════════════════════════════════════════════════════
    POINTS DE TRACÉ (remplace CHECKPOINTS)
-   Chaque course a un tableau de { km, alt, lon, lat, terrain }
    ═══════════════════════════════════════════════════════════ */
 let TRACK_POINTS = {
   GRR: [],
@@ -898,13 +897,12 @@ let trackDataSources = {};
 let trackVisibility = { GRR: true, MAS: true, TDB: true, ZEM: true, MTR: true };
 
 /* ═══════════════════════════════════════════════════════════
-   SUIVI EN DIRECT
+   SUIVI EN DIRECT (API uniquement — PAS de simulation)
    ═══════════════════════════════════════════════════════════ */
 let liveMarkers = {};
 let liveRunners = { male: [], female: [] };
 let trackingActive = false;
 let trackingTimer = null;
-let simulationMode = false;  // bascule simulation si API indisponible
 
 /* ═══════════════════════════════════════════════════════════
    CESIUM
@@ -960,7 +958,9 @@ function addRaceMarkers() {
       point: {
         pixelSize: 14,
         color: Cesium.Color.fromCssColorString(info.color),
-        outlineColor: Cesium.Color.WHITE, outlineWidth: 3
+        outlineColor: Cesium.Color.WHITE, outlineWidth: 3,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       label: {
         text: info.name,
@@ -969,7 +969,9 @@ function addRaceMarkers() {
         outlineColor: Cesium.Color.BLACK, outlineWidth: 3,
         style: Cesium.LabelStyle.FILL_AND_OUTLINE,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        pixelOffset: new Cesium.Cartesian2(0, -18)
+        pixelOffset: new Cesium.Cartesian2(0, -18),
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
       }
     });
   });
@@ -1177,9 +1179,10 @@ async function loadTrack(raceId) {
     }
     if (!coordinates.length) throw new Error('Aucune coordonnée');
 
-    // ✅ Stocker les points pour le suivi live
+    // Trier par km croissant (une seule fois)
+    points.sort((a, b) => a.km - b.km);
     TRACK_POINTS[raceId] = points;
-    console.log(`📍 ${raceId} : ${points.length} points indexés (${(points[points.length-1]?.km || 0).toFixed(1)} km)`);
+    console.log(`📍 ${raceId} : ${points.length} points indexés (${points[points.length-1].km.toFixed(1)} km)`);
 
     const geojson = {
       type: 'Feature',
@@ -1261,7 +1264,12 @@ function getPositionFromTrack(raceId, km) {
   const pts = TRACK_POINTS[raceId];
   if (!pts || !pts.length) return null;
 
-  // Recherche dichotomique
+  // Clamp aux bornes
+  const minKm = pts[0].km;
+  const maxKm = pts[pts.length - 1].km;
+  km = Math.max(minKm, Math.min(maxKm, km));
+
+  // Recherche dichotomique fiable (tri garanti au chargement)
   let lo = 0, hi = pts.length - 1;
   while (lo < hi) {
     const mid = Math.floor((lo + hi) / 2);
@@ -1317,8 +1325,8 @@ async function fetchTopRunners(raceId, sex = 'MALE', limit = TOP_N) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SUIVI EN DIRECT
-   Essaie plusieurs endpoints /lives, puis fallback simulation
+   SUIVI EN DIRECT — API UNIQUEMENT
+   Tente plusieurs endpoints, retourne null si aucun ne marche
    ═══════════════════════════════════════════════════════════ */
 const LIVE_ENDPOINTS = [
   (bib) => `https://api.v3.livetrail.net/api/events/runners/${bib}/lives`,
@@ -1334,12 +1342,10 @@ async function tryFetchRunnerPosition(bib) {
       if (!r.ok) continue;
       const d = await r.json();
 
-      // Normaliser les passages selon la structure
       let passings = d.passings || d.lives || d.points || [];
       if (!passings.length && Array.isArray(d)) passings = d;
       if (!passings.length) continue;
 
-      // Trier par km décroissant (dernier passage)
       const sorted = [...passings].sort((a, b) => {
         const ak = a.km ?? a.distance ?? a.pointId ?? 0;
         const bk = b.km ?? b.distance ?? b.pointId ?? 0;
@@ -1372,64 +1378,29 @@ async function tryFetchRunnerPosition(bib) {
   return null;
 }
 
-/* Simulation : positionne les coureurs à des km aléatoires cohérents */
-function simulateRunnerPosition(runner, idx) {
-  const pts = TRACK_POINTS[currentRace];
-  if (!pts || !pts.length) return null;
-
-  const totalKm = pts[pts.length - 1].km;
-  // Répartit les coureurs entre 5% et 95% du parcours
-  const km = totalKm * (0.05 + (idx / TOP_N) * 0.9);
-
-  const pos = getPositionFromTrack(currentRace, km);
-  if (!pos) return null;
-
-  return {
-    bib: runner.bib,
-    km: Math.round(km * 10) / 10,
-    name: `km ${km.toFixed(1)}`,
-    time: Date.now() - Math.random() * 3600 * 1000,
-    rank: idx + 1,
-    lat: pos.lat,
-    lon: pos.lon,
-    alt: pos.alt,
-    terrain: pos.terrain,
-    simulated: true
-  };
-}
-
 async function updateLiveMarkers() {
   if (!trackingActive) return;
 
   const race = liveData.find(r => r.raceId === currentRace);
-  const raceInProgress = race && race.status === 'RACE_IN_PROGRESS';
-
-  const allRunners = [...liveRunners.male, ...liveRunners.female];
-  if (!allRunners.length) {
-    setStatus('⏸️ Aucun coureur à suivre — chargez les tracés d\'abord', '#e88b00');
+  if (!race || race.status !== 'RACE_IN_PROGRESS') {
+    setStatus('⏸️ Course pas encore lancée — suivi en attente', '#e88b00');
     return;
   }
 
-  let positions = [];
-
-  if (raceInProgress && !simulationMode) {
-    // Mode réel : on essaie l'API
-    positions = (await Promise.all(
-      allRunners.map(r => tryFetchRunnerPosition(r.bib))
-    )).filter(Boolean);
-
-    if (!positions.length) {
-      console.warn('⚠️ Aucune position API — bascule en mode simulation');
-      simulationMode = true;
-    }
+  const allRunners = [...liveRunners.male, ...liveRunners.female];
+  if (!allRunners.length) {
+    setStatus('⏸️ Aucun coureur à suivre', '#e88b00');
+    return;
   }
 
+  // ✅ API uniquement — pas de simulation
+  const positions = (await Promise.all(
+    allRunners.map(r => tryFetchRunnerPosition(r.bib))
+  )).filter(Boolean);
+
   if (!positions.length) {
-    // Mode simulation : on place les coureurs sur le tracé
-    simulationMode = true;
-    positions = allRunners
-      .map((r, i) => simulateRunnerPosition(r, i))
-      .filter(Boolean);
+    setStatus('⚠️ Aucune position reçue de l\'API — vérifier les endpoints', '#e88b00');
+    return;
   }
 
   let updated = 0;
@@ -1441,7 +1412,7 @@ async function updateLiveMarkers() {
       ? Cesium.Color.fromCssColorString('#EF4135')
       : Cesium.Color.fromCssColorString('#0055A4');
 
-    const position = Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, pos.alt + 30);
+    const position = Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, 0);
     const existing = liveMarkers[pos.bib];
 
     if (existing) {
@@ -1460,7 +1431,8 @@ async function updateLiveMarkers() {
           color: color,
           outlineColor: Cesium.Color.WHITE,
           outlineWidth: 3,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
         },
         label: {
           text: `${runner.firstName} ${runner.lastName}`,
@@ -1471,7 +1443,9 @@ async function updateLiveMarkers() {
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
           pixelOffset: new Cesium.Cartesian2(0, -18),
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 40000)
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 40000),
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
         },
         description: buildPopupHTML(runner, pos, isFemale)
       });
@@ -1493,14 +1467,11 @@ async function updateLiveMarkers() {
   document.getElementById('ivLastUpdate').textContent = time;
   document.getElementById('lcUpdate').textContent = time;
 
-  const mode = simulationMode ? '⚠️ SIMULATION' : '🟢 API';
-  setStatus(`${mode} · ${updated} coureurs suivis — MAJ ${time}`,
-            simulationMode ? '#e88b00' : '#00a854');
+  setStatus(`🟢 ${updated} coureurs suivis — MAJ ${time}`, '#00a854');
 }
 
 function buildPopupHTML(runner, pos, isFemale) {
   const color = isFemale ? '#EF4135' : '#0055A4';
-  const simBadge = pos.simulated ? '<div style="color:#e88b00;font-size:10px;margin-top:4px">⚠️ Position simulée</div>' : '';
   return `
     <div style="font-family:Inter,sans-serif;padding:10px;min-width:200px">
       <div style="font-weight:800;font-size:14px;color:${color};margin-bottom:6px">
@@ -1512,7 +1483,6 @@ function buildPopupHTML(runner, pos, isFemale) {
         <div>📍 ${pos.km} km · ${pos.alt ? Math.round(pos.alt) + ' m' : '—'}</div>
         <div>🏆 Classement <strong>#${pos.rank}</strong></div>
         <div>⏱️ ${pos.time ? new Date(pos.time).toLocaleTimeString('fr-FR') : '—'}</div>
-        ${simBadge}
       </div>
     </div>
   `;
@@ -1559,7 +1529,6 @@ async function startLiveTracking() {
   }
 
   trackingActive = true;
-  simulationMode = false;
   document.getElementById('liveCounter').classList.add('visible');
   document.getElementById('ivTrackingStatus').textContent = 'Actif';
   document.getElementById('ivTrackingStatus').style.color = 'var(--green)';
@@ -1574,7 +1543,6 @@ async function startLiveTracking() {
 
 function stopLiveTracking() {
   trackingActive = false;
-  simulationMode = false;
   if (trackingTimer) clearInterval(trackingTimer);
   trackingTimer = null;
 
