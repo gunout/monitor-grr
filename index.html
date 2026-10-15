@@ -370,6 +370,10 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
   font-family:var(--font-mono); font-size:.65rem; color:var(--green);
   font-weight:700; flex-shrink:0;
 }
+.rank-item .diff {
+  font-family:var(--font-mono); font-size:.62rem; color:var(--text-2);
+  flex-shrink:0;
+}
 
 #status {
   text-align:center; padding:12px;
@@ -646,6 +650,13 @@ footer .devise-fr {
       </div>
 
       <div class="intel-panel">
+        <div class="intel-head"><span>📍 DISTRIBUTION</span></div>
+        <div class="intel-body" id="distributionList">
+          <div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
         <div class="intel-head"><span>🟢 SUIVI EN DIRECT</span></div>
         <div class="intel-body">
           <div class="intel-row"><span class="k">Hommes suivis</span><span class="v cyan" id="ivMale">0</span></div>
@@ -768,10 +779,15 @@ document.addEventListener('keydown', (e) => {
    CONFIG
    ═══════════════════════════════════════════════════════════ */
 const TENANT = 'grandraid-reunion_2026';
-const API_LIVE = 'https://api.v3.livetrail.net/api/events/races/lives';
-const API_RACES = 'https://api.v3.livetrail.net/api/events/races/';
-const API_RUNNERS = 'https://api.v3.livetrail.net/api/events/runners';
-const API_POINTS = 'https://api.v3.livetrail.net/api/events/points?raceId=';
+const API_BASE = 'https://api.v3.livetrail.net/api/events';
+const API_LIVE = `${API_BASE}/races/lives`;
+const API_RACES = `${API_BASE}/races/`;
+const API_RACE_LIVE = (raceId) => `${API_BASE}/races/${raceId}/live`;
+const API_HEAD_RUNNERS = (raceId) => `${API_BASE}/races/${raceId}/head-runners`;
+const API_RANKING = (raceId, limit, page) => `${API_BASE}/ranking/progressive/${raceId}?limit=${limit}&page=${page}`;
+const API_POINTS = `${API_BASE}/points?raceId=`;
+const API_RUNNERS = `${API_BASE}/runners`;
+
 const REFRESH_MS = 60000;
 const TRACK_REFRESH_MS = 30000;
 const TOP_N = 20;
@@ -787,7 +803,6 @@ const RACES = {
 
 let TRACK_POINTS = { GRR: [], MAS: [], TDB: [], ZEM: [], MTR: [] };
 let RACE_POINTS = { GRR: {}, MAS: {}, TDB: {}, ZEM: {}, MTR: {} };
-
 let TRACKS = { GRR: null, MAS: null, TDB: null, ZEM: null, MTR: null };
 let viewer = null;
 let liveData = [];
@@ -795,16 +810,11 @@ let currentRace = 'GRR';
 let trackDataSources = {};
 let trackVisibility = { GRR: true, MAS: true, TDB: true, ZEM: true, MTR: true };
 
-/* ═══════════════════════════════════════════════════════════
-   SUIVI EN DIRECT — API UNIQUEMENT
-   ═══════════════════════════════════════════════════════════ */
 let liveMarkers = {};
 let liveRunners = { male: [], female: [] };
 let trackingActive = false;
 let trackingTimer = null;
-
-/* Cache du classement pour éviter les appels répétés */
-let rankingCache = { GRR: {}, MAS: {}, TDB: {}, ZEM: {}, MTR: {} };
+let currentRanking = { male: [], female: [] };
 
 /* ═══════════════════════════════════════════════════════════
    CESIUM
@@ -880,7 +890,7 @@ function addRaceMarkers() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   BOUSSOLE INTERACTIVE
+   BOUSSOLE
    ═══════════════════════════════════════════════════════════ */
 function setupCompass() {
   const compass = document.getElementById('compass');
@@ -936,27 +946,6 @@ function setupCompass() {
     }
   });
 
-  compass.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    isDragging = true;
-    startX = e.touches[0].clientX;
-    startHeading = viewer.camera.heading;
-  }, { passive: false });
-
-  document.addEventListener('touchmove', (e) => {
-    if (!isDragging) return;
-    const deltaX = e.touches[0].clientX - startX;
-    const newHeading = startHeading - deltaX * 0.008;
-    viewer.camera.setView({
-      orientation: { heading: newHeading, pitch: viewer.camera.pitch, roll: 0 }
-    });
-    updateCompass();
-  }, { passive: true });
-
-  document.addEventListener('touchend', () => {
-    isDragging = false;
-  });
-
   compass.querySelectorAll('.compass-label').forEach(label => {
     label.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1007,7 +996,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ═══════════════════════════════════════════════════════════
-   TRACÉS + POINTS DE PASSAGE
+   TRACÉS
    ═══════════════════════════════════════════════════════════ */
 async function loadTrackUrls() {
   setStatus('🔍 Récupération des URLs de tracés…');
@@ -1017,14 +1006,10 @@ async function loadTrackUrls() {
       const r = await fetch(API_RACES + raceId, { headers: { 'X-Tenant': TENANT } });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
-      if (d.trackUrl) {
-        TRACKS[raceId] = d.trackUrl;
-        loaded++;
-      }
+      if (d.trackUrl) { TRACKS[raceId] = d.trackUrl; loaded++; }
     } catch (e) { console.error('❌ ' + raceId, e.message); }
   }
   setStatus('✓ ' + loaded + '/5 URLs récupérées', '#00a854');
-  return loaded;
 }
 
 async function loadTrack(raceId) {
@@ -1047,12 +1032,8 @@ async function loadTrack(raceId) {
         if (!Array.isArray(seg.segment)) return;
         seg.segment.forEach(pt => {
           if (Array.isArray(pt) && Array.isArray(pt[2]) && pt[2].length >= 2) {
-            const distM = pt[0];
-            const altM = pt[1];
-            const lon = pt[2][0];
-            const lat = pt[2][1];
+            const distM = pt[0], altM = pt[1], lon = pt[2][0], lat = pt[2][1];
             const terrain = pt[5] || 'R';
-
             if (typeof lon === 'number' && typeof lat === 'number' &&
                 lon > -180 && lon < 180 && lat > -90 && lat < 90) {
               coordinates.push([lon, lat]);
@@ -1103,9 +1084,6 @@ async function loadTrack(raceId) {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   CHARGEMENT DES POINTS DE PASSAGE
-   ═══════════════════════════════════════════════════════════ */
 async function loadRacePoints(raceId) {
   try {
     const r = await fetch(API_POINTS + raceId, { headers: { 'X-Tenant': TENANT } });
@@ -1125,10 +1103,8 @@ async function loadRacePoints(raceId) {
     });
     RACE_POINTS[raceId] = map;
     console.log(`📌 ${raceId} : ${points.length} points de passage indexés`);
-    return points.length;
   } catch (e) {
     console.error(`❌ points ${raceId}:`, e);
-    return 0;
   }
 }
 
@@ -1176,15 +1152,10 @@ function viewAll() {
   });
 }
 
-/* ═══════════════════════════════════════════════════════════
-   RECHERCHE DE POSITION SUR LE TRACÉ
-   ═══════════════════════════════════════════════════════════ */
 function getPositionFromTrack(raceId, km) {
   const pts = TRACK_POINTS[raceId];
   if (!pts || !pts.length) return null;
-
-  const minKm = pts[0].km;
-  const maxKm = pts[pts.length - 1].km;
+  const minKm = pts[0].km, maxKm = pts[pts.length - 1].km;
   km = Math.max(minKm, Math.min(maxKm, km));
 
   let lo = 0, hi = pts.length - 1;
@@ -1194,10 +1165,8 @@ function getPositionFromTrack(raceId, km) {
     else hi = mid;
   }
 
-  const p2 = pts[lo];
-  const p1 = pts[Math.max(0, lo - 1)];
+  const p2 = pts[lo], p1 = pts[Math.max(0, lo - 1)];
   if (!p1 || !p2) return p2;
-
   const range = p2.km - p1.km;
   const ratio = range > 0 ? (km - p1.km) / range : 0;
 
@@ -1211,29 +1180,11 @@ function getPositionFromTrack(raceId, km) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   LIVE DATA
+   FETCH RACE LIVE (statut + stats + distribution)
    ═══════════════════════════════════════════════════════════ */
-async function fetchLive() {
+async function fetchRaceLive(raceId) {
   try {
-    const r = await fetch(API_LIVE, { headers: { 'X-Tenant': TENANT } });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    liveData = await r.json();
-    renderAll();
-  } catch (e) {
-    console.error('❌ API :', e);
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   ENRICHISSEMENT DES RUNNERS AVEC LEUR CLASSEMENT RÉEL
-   Le /runners ne renvoie pas le classement. On appelle
-   /runners/{bib} pour chaque coureur (avec cache).
-   ═══════════════════════════════════════════════════════════ */
-async function fetchRunnerDetail(bib) {
-  try {
-    const r = await fetch(`${API_RUNNERS}/${bib}`, {
-      headers: { 'X-Tenant': TENANT }
-    });
+    const r = await fetch(API_RACE_LIVE(raceId), { headers: { 'X-Tenant': TENANT } });
     if (!r.ok) return null;
     return await r.json();
   } catch (e) {
@@ -1241,80 +1192,161 @@ async function fetchRunnerDetail(bib) {
   }
 }
 
-async function enrichRunnersWithRanking(runners, raceId) {
-  if (!runners.length) return runners;
-
-  const enriched = await Promise.all(runners.map(async r => {
-    // Vérifier le cache
-    const cached = rankingCache[raceId]?.[r.bib];
-    if (cached && (Date.now() - cached._ts) < 60000) {
-      return { ...r, ...cached };
-    }
-
-    const detail = await fetchRunnerDetail(r.bib);
-    if (!detail) return r;
-
-    const enrichedRunner = {
-      ...r,
-      ranking: detail.ranking,
-      lastPassage: detail.lastPassage,
-      nextPassage: detail.nextPassage,
-      raceTime: detail.raceTime,
-      diffToFirst: detail.diffToFirst,
-      runnerStatus: detail.status,
-      _ts: Date.now()
-    };
-
-    // Sauvegarder dans le cache
-    if (!rankingCache[raceId]) rankingCache[raceId] = {};
-    rankingCache[raceId][r.bib] = enrichedRunner;
-
-    return enrichedRunner;
-  }));
-
-  return enriched;
-}
-
-/* Tri par classement réel (scratch pour les hommes, sex pour les femmes) */
-function sortByRanking(runners, sex) {
-  return [...runners].sort((a, b) => {
-    const rankA = a.ranking?.scratch ?? 99999;
-    const rankB = b.ranking?.scratch ?? 99999;
-    return rankA - rankB;
-  });
-}
-
 /* ═══════════════════════════════════════════════════════════
-   FETCH TOP RUNNERS (avec classement réel)
+   FETCH RANKING PROGRESSIVE (classement officiel)
    ═══════════════════════════════════════════════════════════ */
-async function fetchTopRunners(raceId, sex = 'MALE', limit = TOP_N) {
-  if (RACES[raceId]?.relays) return [];
+async function fetchRankingProgressive(raceId, limit = 50, page = 0) {
   try {
-    const fullUrl = `${API_RUNNERS}?raceId=${raceId}&state=REGISTERED&sex=${sex}&limit=${limit}&page=0`;
-    const r = await fetch(fullUrl, { headers: { 'X-Tenant': TENANT } });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-    const runners = d.runners || [];
-
-    // ✅ Enrichir avec le classement réel
-    const enriched = await enrichRunnersWithRanking(runners, raceId);
-
-    // ✅ Trier par classement scratch
-    return sortByRanking(enriched, sex);
+    const r = await fetch(API_RANKING(raceId, limit, page), { headers: { 'X-Tenant': TENANT } });
+    if (!r.ok) return { runners: [], total: 0 };
+    const data = await r.json();
+    return data;
   } catch (e) {
-    console.error(`❌ runners ${raceId} ${sex}`, e);
-    return [];
+    console.error(`❌ ranking ${raceId}:`, e);
+    return { runners: [], total: 0 };
   }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SUIVI EN DIRECT — API UNIQUEMENT + INTERPOLATION
+   RENDER TOP 20 H/F
+   ═══════════════════════════════════════════════════════════ */
+async function loadAndRenderRanking(raceId) {
+  const data = await fetchRankingProgressive(raceId, 50, 0);
+  const runners = data.runners || [];
+
+  // Séparer H / F
+  const males = runners.filter(r => r.sex === 'MALE');
+  const females = runners.filter(r => r.sex === 'FEMALE');
+
+  currentRanking.male = males;
+  currentRanking.female = females;
+
+  renderRankingPanel('rank-scratch', 'count-scratch', males, TOP_N, 'male');
+  renderRankingPanel('rank-female', 'count-female', females, TOP_N, 'female');
+
+  // Top coureurs dans le panneau intelligence
+  renderTopList(males.slice(0, 8), 'male');
+}
+
+function renderRankingPanel(containerId, countId, list, limit, sex) {
+  const el = document.getElementById(containerId);
+  const countEl = document.getElementById(countId);
+
+  if (RACES[currentRace]?.relays) {
+    el.innerHTML = `
+      <div style="padding:16px;text-align:center;color:var(--text-1);font-family:var(--font-mono);font-size:.75em;line-height:1.7">
+        <div style="font-size:2rem;margin-bottom:8px">🔁</div>
+        <strong style="color:var(--text-0);font-size:1.05em">Course en relais</strong><br>
+        Le Zembrocal Trail se court en équipes de 4.<br>
+        Classements disponibles par équipe.
+      </div>
+    `;
+    if (countEl) countEl.textContent = 'Relais';
+    return;
+  }
+
+  if (!list || !list.length) {
+    el.innerHTML = '<p style="color:var(--text-2);font-size:.75em;padding:8px;font-family:var(--font-mono)">En attente des premiers passages…</p>';
+    if (countEl) countEl.textContent = '0';
+    return;
+  }
+
+  const runners = list.slice(0, limit);
+  if (countEl) countEl.textContent = `${list.length} coureurs`;
+
+  el.innerHTML = runners.map((r, i) => {
+    const cls = i === 0 ? 'p1' : i === 1 ? 'p2' : i === 2 ? 'p3' : '';
+    const isTracked = liveMarkers[r.bib] ? 'tracked' : '';
+    const rank = r.ranking?.scratch || (i + 1);
+    const diff = r.diffToFirst != null ? `+${r.diffToFirst}s` : '—';
+    const livePos = liveMarkers[r.bib]?.lastPosition;
+    const liveInfo = livePos ? `<span class="pos-live">${livePos.km.toFixed(0)} km</span>` : '';
+
+    return `
+      <div class="rank-item ${cls} ${isTracked}">
+        <span class="medal">${rank}</span>
+        <span class="name">${r.firstName || '—'} ${r.lastName || '—'}</span>
+        ${liveInfo}
+        <span class="diff">${diff}</span>
+        <span class="bib">#${r.bib || '—'}</span>
+        <span class="flag">${r.countryCode || '—'}</span>
+      </div>`;
+  }).join('');
+}
+
+function renderTopList(topRunners, sex) {
+  const el = document.getElementById('topList');
+  if (!topRunners.length) {
+    el.innerHTML = '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>';
+    return;
+  }
+
+  el.innerHTML = topRunners.map((r, i) => {
+    const rank = r.ranking?.scratch || (i + 1);
+    const diff = r.diffToFirst != null ? `+${r.diffToFirst}s` : '';
+    return `
+      <div class="intel-row">
+        <span class="k" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">
+          ${rank}. ${r.firstName} ${r.lastName}
+        </span>
+        <span class="v amber">${diff || '★'}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER STATS (depuis /races/{race}/live)
+   ═══════════════════════════════════════════════════════════ */
+function renderStatsFromLive(raceLive) {
+  if (!raceLive) return;
+
+  const s = raceLive.stats || {};
+  const status = raceLive.status || '—';
+
+  document.getElementById('ivStatus').textContent = status;
+  document.getElementById('tbStatus').textContent = status;
+
+  document.getElementById('stat-status').textContent = status;
+  document.getElementById('stat-registered').textContent = s.registered ?? '—';
+  document.getElementById('stat-onrace').textContent = s.onRace ?? 0;
+  document.getElementById('stat-finisher').textContent = s.finisher ?? 0;
+  document.getElementById('stat-dnf').textContent = s.dnf ?? 0;
+
+  document.getElementById('gsRegistered').textContent = s.registered ?? '—';
+  document.getElementById('gsOnRace').textContent = s.onRace ?? 0;
+  document.getElementById('gsFinisher').textContent = s.finisher ?? 0;
+  document.getElementById('gsDnf').textContent = s.dnf ?? 0;
+
+  // Distribution
+  const distEl = document.getElementById('distributionList');
+  const dist = raceLive.distribution;
+  if (dist && dist.ranges && dist.ranges.length) {
+    const total = dist.total || 1;
+    distEl.innerHTML = dist.ranges.map(range => {
+      const pct = ((range.total / total) * 100).toFixed(1);
+      const label = `${(range.startKm/1000).toFixed(0)} → ${(range.stopKm/1000).toFixed(0)} km`;
+      return `
+        <div class="intel-row" style="flex-direction:column;align-items:stretch;gap:4px">
+          <div style="display:flex;justify-content:space-between">
+            <span class="k">${label}</span>
+            <span class="v cyan">${range.total} · ${pct}%</span>
+          </div>
+          <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    distEl.innerHTML = '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SUIVI LIVE (marqueurs sur la carte)
    ═══════════════════════════════════════════════════════════ */
 async function tryFetchRunnerPosition(bib) {
   try {
-    const r = await fetch(`${API_RUNNERS}/${bib}`, {
-      headers: { 'X-Tenant': TENANT }
-    });
+    const r = await fetch(`${API_RUNNERS}/${bib}`, { headers: { 'X-Tenant': TENANT } });
     if (!r.ok) return null;
     const d = await r.json();
 
@@ -1327,10 +1359,7 @@ async function tryFetchRunnerPosition(bib) {
     const nextPointId = d.nextPassage?.pointId;
     const cpNext = nextPointId != null ? RACE_POINTS[currentRace]?.[nextPointId] : null;
 
-    let km = cpLast.km;
-    let lat = cpLast.lat;
-    let lon = cpLast.lon;
-    let alt = cpLast.alt;
+    let km = cpLast.km, lat = cpLast.lat, lon = cpLast.lon, alt = cpLast.alt;
     let name = cpLast.name;
     let progress = 0;
 
@@ -1343,48 +1372,27 @@ async function tryFetchRunnerPosition(bib) {
         let ratio = (now - t0) / (t1 - t0);
         ratio = Math.max(0, Math.min(1, ratio));
         progress = ratio;
-
-        km  = cpLast.km  + (cpNext.km  - cpLast.km)  * ratio;
+        km = cpLast.km + (cpNext.km - cpLast.km) * ratio;
 
         const pos = getPositionFromTrack(currentRace, km);
-        if (pos) {
-          lat = pos.lat;
-          lon = pos.lon;
-          alt = pos.alt;
-        }
-
+        if (pos) { lat = pos.lat; lon = pos.lon; alt = pos.alt; }
         name = `${cpLast.name} → ${cpNext.name} (${Math.round(ratio * 100)}%)`;
       }
     }
 
     return {
-      bib,
-      km,
-      name,
+      bib, km, name,
       time: d.lastPassage.dateTime,
       rank: d.ranking?.scratch || 0,
-      rankSex: d.ranking?.sex || 0,
-      lat,
-      lon,
-      alt,
+      lat, lon, alt,
       status: d.status,
-      nextPointId,
-      progress,
-      lastPointId
+      nextPointId, progress, lastPointId
     };
-  } catch (e) {
-    return null;
-  }
+  } catch (e) { return null; }
 }
 
 async function updateLiveMarkers() {
   if (!trackingActive) return;
-
-  const race = liveData.find(r => r.raceId === currentRace);
-  if (!race || !ACTIVE_STATUSES.includes(race.status)) {
-    setStatus('⏸️ Course pas encore lancée — suivi en attente', '#e88b00');
-    return;
-  }
 
   const allRunners = [...liveRunners.male, ...liveRunners.female];
   if (!allRunners.length) {
@@ -1397,7 +1405,7 @@ async function updateLiveMarkers() {
   )).filter(Boolean);
 
   if (!positions.length) {
-    setStatus('⚠️ Aucune position reçue de l\'API', '#e88b00');
+    setStatus('⚠️ Aucune position reçue', '#e88b00');
     return;
   }
 
@@ -1425,10 +1433,8 @@ async function updateLiveMarkers() {
         name: `${runner.firstName} ${runner.lastName}`,
         position: position,
         point: {
-          pixelSize: 14,
-          color: color,
-          outlineColor: Cesium.Color.WHITE,
-          outlineWidth: 3,
+          pixelSize: 14, color: color,
+          outlineColor: Cesium.Color.WHITE, outlineWidth: 3,
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           disableDepthTestDistance: Number.POSITIVE_INFINITY
         },
@@ -1436,8 +1442,7 @@ async function updateLiveMarkers() {
           text: `${runner.firstName} ${runner.lastName}`,
           font: 'bold 11px Inter, sans-serif',
           fillColor: Cesium.Color.WHITE,
-          outlineColor: Cesium.Color.BLACK,
-          outlineWidth: 3,
+          outlineColor: Cesium.Color.BLACK, outlineWidth: 3,
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
           pixelOffset: new Cesium.Cartesian2(0, -18),
@@ -1464,13 +1469,11 @@ async function updateLiveMarkers() {
   const time = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   document.getElementById('ivLastUpdate').textContent = time;
   document.getElementById('lcUpdate').textContent = time;
-
   setStatus(`🟢 ${updated} coureurs suivis — MAJ ${time}`, '#00a854');
 }
 
 function buildPopupHTML(runner, pos, isFemale) {
   const color = isFemale ? '#EF4135' : '#0055A4';
-  const rankLabel = pos.rank ? `#${pos.rank}` : '—';
   return `
     <div style="font-family:Inter,sans-serif;padding:10px;min-width:220px">
       <div style="font-weight:800;font-size:14px;color:${color};margin-bottom:6px">
@@ -1481,7 +1484,7 @@ function buildPopupHTML(runner, pos, isFemale) {
         <div>🌍 ${runner.countryCode || '—'}</div>
         <div>📍 <strong>${pos.km.toFixed(1)} km</strong> · ${pos.name}</div>
         <div>⛰️ Altitude ${Math.round(pos.alt)} m</div>
-        <div>🏆 Classement <strong>${rankLabel}</strong></div>
+        <div>🏆 Classement <strong>#${pos.rank}</strong></div>
         <div>⏱️ ${pos.time ? new Date(pos.time).toLocaleTimeString('fr-FR') : '—'}</div>
       </div>
     </div>
@@ -1502,7 +1505,7 @@ async function startLiveTracking() {
   if (trackingActive) return;
 
   if (!TRACK_POINTS[currentRace] || !TRACK_POINTS[currentRace].length) {
-    setStatus('⏳ Chargement des tracés requis pour le suivi…', '#e88b00');
+    setStatus('⏳ Chargement des tracés requis…', '#e88b00');
     await loadAllTracks();
   }
 
@@ -1516,18 +1519,18 @@ async function startLiveTracking() {
     return;
   }
 
-  setStatus('📥 Chargement des 20 premiers H/F…');
-  const [males, females] = await Promise.all([
-    fetchTopRunners(currentRace, 'MALE', TOP_N),
-    fetchTopRunners(currentRace, 'FEMALE', TOP_N)
-  ]);
-  liveRunners.male = males;
-  liveRunners.female = females;
+  // Récupérer le Top 20 H/F via le ranking progressive
+  setStatus('📥 Chargement du classement officiel…');
+  const data = await fetchRankingProgressive(currentRace, 100, 0);
+  const runners = data.runners || [];
 
-  console.log(`🎯 Suivi: ${males.length} H + ${females.length} F`);
+  liveRunners.male = runners.filter(r => r.sex === 'MALE').slice(0, TOP_N);
+  liveRunners.female = runners.filter(r => r.sex === 'FEMALE').slice(0, TOP_N);
 
-  if (!males.length && !females.length) {
-    setStatus('❌ Aucun coureur récupéré — vérifier API', 'var(--fr-red)');
+  console.log(`🎯 Suivi: ${liveRunners.male.length} H + ${liveRunners.female.length} F`);
+
+  if (!liveRunners.male.length && !liveRunners.female.length) {
+    setStatus('❌ Aucun coureur récupéré', 'var(--fr-red)');
     return;
   }
 
@@ -1556,7 +1559,6 @@ function stopLiveTracking() {
   Object.values(liveMarkers).forEach(m => viewer.entities.remove(m.entity));
   liveMarkers = {};
   updateLiveCounter();
-
   setStatus('⏸️ Suivi en direct arrêté', '#e88b00');
 }
 
@@ -1620,105 +1622,19 @@ function renderRightPanels() {
   document.getElementById('ivDplus').textContent = info.dplus;
   document.getElementById('ivStatus').textContent = race?.status || '—';
 
-  const s = race?.stats || {};
-  document.getElementById('gsRegistered').textContent = s.registered ?? '—';
-  document.getElementById('gsOnRace').textContent = s.onRace ?? 0;
-  document.getElementById('gsFinisher').textContent = s.finisher ?? 0;
-  document.getElementById('gsDnf').textContent = s.dnf ?? 0;
-
-  document.getElementById('stat-status').textContent = race?.status || '—';
-  document.getElementById('stat-registered').textContent = s.registered ?? '—';
-  document.getElementById('stat-onrace').textContent = s.onRace ?? 0;
-  document.getElementById('stat-finisher').textContent = s.finisher ?? 0;
-  document.getElementById('stat-dnf').textContent = s.dnf ?? 0;
-
-  document.getElementById('tbStatus').textContent = race?.status || '—';
   document.getElementById('sysUpdate').textContent = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
-}
-
-function renderRanking(containerId, countId, list, limit = TOP_N, raceId = null) {
-  const el = document.getElementById(containerId);
-  const countEl = document.getElementById(countId);
-
-  if (raceId && RACES[raceId]?.relays) {
-    el.innerHTML = `
-      <div style="padding:16px;text-align:center;color:var(--text-1);font-family:var(--font-mono);font-size:.75em;line-height:1.7">
-        <div style="font-size:2rem;margin-bottom:8px">🔁</div>
-        <strong style="color:var(--text-0);font-size:1.05em">Course en relais</strong><br>
-        Le Zembrocal Trail se court en équipes de 4.<br>
-        Classements disponibles par équipe,<br>
-        pas par coureur individuel.
-      </div>
-    `;
-    if (countEl) countEl.textContent = 'Relais';
-    return;
-  }
-
-  if (!list || !list.length) {
-    el.innerHTML = '<p style="color:var(--text-2);font-size:.75em;padding:8px;font-family:var(--font-mono)">Aucun coureur disponible.</p>';
-    if (countEl) countEl.textContent = '0';
-    return;
-  }
-
-  const runners = list.slice(0, limit);
-  if (countEl) countEl.textContent = `${list.length} coureurs`;
-
-  el.innerHTML = runners.map((r, i) => {
-    const cls = i === 0 ? 'p1' : i === 1 ? 'p2' : i === 2 ? 'p3' : '';
-    const isTracked = liveMarkers[r.bib] ? 'tracked' : '';
-    // ✅ Utiliser le VRAI classement
-    const realRank = r.ranking?.scratch || r.ranking?.sex || (i + 1);
-    const livePos = liveMarkers[r.bib]?.lastPosition;
-    const liveInfo = livePos ? `<span class="pos-live">${livePos.km.toFixed(0)} km</span>` : '';
-    return `
-      <div class="rank-item ${cls} ${isTracked}">
-        <span class="medal">${realRank}</span>
-        <span class="name">${r.firstName || '—'} ${r.lastName || '—'}</span>
-        ${liveInfo}
-        <span class="bib">#${r.bib || '—'}</span>
-        <span class="flag">${r.countryCode || '—'}</span>
-      </div>`;
-  }).join('');
 }
 
 async function renderAll() {
   renderSidebar();
   renderRightPanels();
 
-  const [scratchList, femaleList] = await Promise.all([
-    fetchTopRunners(currentRace, 'MALE', TOP_N),
-    fetchTopRunners(currentRace, 'FEMALE', TOP_N)
-  ]);
+  // Stats via /races/{race}/live
+  const raceLive = await fetchRaceLive(currentRace);
+  renderStatsFromLive(raceLive);
 
-  renderRanking('rank-scratch', 'count-scratch', scratchList, TOP_N, currentRace);
-  renderRanking('rank-female',  'count-female',  femaleList, TOP_N, currentRace);
-
-  const top = [...scratchList.slice(0, 8)];
-  document.getElementById('topList').innerHTML = top.length ? top.map((r, i) => `
-    <div class="intel-row">
-      <span class="k" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">
-        ${r.ranking?.scratch || (i+1)}. ${r.firstName} ${r.lastName}
-      </span>
-      <span class="v amber">${r.ranking?.scratch ? '★ ' + r.ranking.scratch : '—'}</span>
-    </div>
-  `).join('') : '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>';
-
-  const cats = {};
-  scratchList.forEach(r => { cats[r.category] = (cats[r.category] || 0) + 1; });
-  const sorted = Object.entries(cats).sort((a,b) => b[1] - a[1]).slice(0, 8);
-  const total = sorted.reduce((s,[,c]) => s+c, 0) || 1;
-  document.getElementById('catList').innerHTML = sorted.length ? sorted.map(([cat, count]) => {
-    const pct = (count/total*100).toFixed(0);
-    return `
-      <div class="intel-row" style="flex-direction:column;align-items:stretch;gap:4px">
-        <div style="display:flex;justify-content:space-between">
-          <span class="k">${cat}</span>
-          <span class="v cyan">${count} · ${pct}%</span>
-        </div>
-        <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
-      </div>
-    `;
-  }).join('') : '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>';
+  // Classement via /ranking/progressive
+  await loadAndRenderRanking(currentRace);
 }
 
 function setStatus(msg, color) {
@@ -1809,8 +1725,17 @@ setInterval(() => {
   await loadTrackUrls();
   await loadAllTracks();
   await loadAllRacePoints();
-  await fetchLive();
-  setInterval(fetchLive, REFRESH_MS);
+
+  // Récupérer le statut global des courses
+  try {
+    const r = await fetch(API_LIVE, { headers: { 'X-Tenant': TENANT } });
+    liveData = await r.json();
+  } catch (e) {
+    console.error('❌ lives:', e);
+  }
+
+  await renderAll();
+  setInterval(renderAll, REFRESH_MS);
 })();
 </script>
 </body>
