@@ -791,6 +791,7 @@ const API_RUNNERS = `${API_BASE}/runners`;
 const REFRESH_MS = 60000;
 const TRACK_REFRESH_MS = 30000;
 const TOP_N = 20;
+const RANKING_LIMIT = 500;   // ✅ 500 pour avoir 20+ femmes
 const ACTIVE_STATUSES = ['RACE_IN_PROGRESS', 'STARTED', 'LIVE', 'ON_RACE'];
 
 const RACES = {
@@ -1180,7 +1181,7 @@ function getPositionFromTrack(raceId, km) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   FETCH RACE LIVE (statut + stats + distribution)
+   FETCH RACE LIVE
    ═══════════════════════════════════════════════════════════ */
 async function fetchRaceLive(raceId) {
   try {
@@ -1194,8 +1195,9 @@ async function fetchRaceLive(raceId) {
 
 /* ═══════════════════════════════════════════════════════════
    FETCH RANKING PROGRESSIVE (classement officiel)
+   limit=500 pour avoir 20+ femmes
    ═══════════════════════════════════════════════════════════ */
-async function fetchRankingProgressive(raceId, limit = 50, page = 0) {
+async function fetchRankingProgressive(raceId, limit = RANKING_LIMIT, page = 0) {
   try {
     const r = await fetch(API_RANKING(raceId, limit, page), { headers: { 'X-Tenant': TENANT } });
     if (!r.ok) return { runners: [], total: 0 };
@@ -1208,23 +1210,22 @@ async function fetchRankingProgressive(raceId, limit = 50, page = 0) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RENDER TOP 20 H/F
+   RENDER TOP 20 H/F (avec limit=500)
    ═══════════════════════════════════════════════════════════ */
 async function loadAndRenderRanking(raceId) {
-  const data = await fetchRankingProgressive(raceId, 50, 0);
+  const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
   const runners = data.runners || [];
 
-  // Séparer H / F
   const males = runners.filter(r => r.sex === 'MALE');
   const females = runners.filter(r => r.sex === 'FEMALE');
 
   currentRanking.male = males;
   currentRanking.female = females;
 
+  console.log(`📊 Classement ${raceId}: ${males.length} H, ${females.length} F (sur ${runners.length} récupérés)`);
+
   renderRankingPanel('rank-scratch', 'count-scratch', males, TOP_N, 'male');
   renderRankingPanel('rank-female', 'count-female', females, TOP_N, 'female');
-
-  // Top coureurs dans le panneau intelligence
   renderTopList(males.slice(0, 8), 'male');
 }
 
@@ -1258,7 +1259,7 @@ function renderRankingPanel(containerId, countId, list, limit, sex) {
     const cls = i === 0 ? 'p1' : i === 1 ? 'p2' : i === 2 ? 'p3' : '';
     const isTracked = liveMarkers[r.bib] ? 'tracked' : '';
     const rank = r.ranking?.scratch || (i + 1);
-    const diff = r.diffToFirst != null ? `+${r.diffToFirst}s` : '—';
+    const diff = r.diffToFirst != null && r.diffToFirst > 0 ? `+${r.diffToFirst}s` : '—';
     const livePos = liveMarkers[r.bib]?.lastPosition;
     const liveInfo = livePos ? `<span class="pos-live">${livePos.km.toFixed(0)} km</span>` : '';
 
@@ -1283,20 +1284,20 @@ function renderTopList(topRunners, sex) {
 
   el.innerHTML = topRunners.map((r, i) => {
     const rank = r.ranking?.scratch || (i + 1);
-    const diff = r.diffToFirst != null ? `+${r.diffToFirst}s` : '';
+    const diff = r.diffToFirst != null && r.diffToFirst > 0 ? `+${r.diffToFirst}s` : '★';
     return `
       <div class="intel-row">
         <span class="k" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">
           ${rank}. ${r.firstName} ${r.lastName}
         </span>
-        <span class="v amber">${diff || '★'}</span>
+        <span class="v amber">${diff}</span>
       </div>
     `;
   }).join('');
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RENDER STATS (depuis /races/{race}/live)
+   RENDER STATS
    ═══════════════════════════════════════════════════════════ */
 function renderStatsFromLive(raceLive) {
   if (!raceLive) return;
@@ -1318,7 +1319,6 @@ function renderStatsFromLive(raceLive) {
   document.getElementById('gsFinisher').textContent = s.finisher ?? 0;
   document.getElementById('gsDnf').textContent = s.dnf ?? 0;
 
-  // Distribution
   const distEl = document.getElementById('distributionList');
   const dist = raceLive.distribution;
   if (dist && dist.ranges && dist.ranges.length) {
@@ -1342,7 +1342,7 @@ function renderStatsFromLive(raceLive) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SUIVI LIVE (marqueurs sur la carte)
+   SUIVI LIVE (marqueurs)
    ═══════════════════════════════════════════════════════════ */
 async function tryFetchRunnerPosition(bib) {
   try {
@@ -1519,9 +1519,8 @@ async function startLiveTracking() {
     return;
   }
 
-  // Récupérer le Top 20 H/F via le ranking progressive
   setStatus('📥 Chargement du classement officiel…');
-  const data = await fetchRankingProgressive(currentRace, 100, 0);
+  const data = await fetchRankingProgressive(currentRace, RANKING_LIMIT, 0);
   const runners = data.runners || [];
 
   liveRunners.male = runners.filter(r => r.sex === 'MALE').slice(0, TOP_N);
@@ -1629,11 +1628,9 @@ async function renderAll() {
   renderSidebar();
   renderRightPanels();
 
-  // Stats via /races/{race}/live
   const raceLive = await fetchRaceLive(currentRace);
   renderStatsFromLive(raceLive);
 
-  // Classement via /ranking/progressive
   await loadAndRenderRanking(currentRace);
 }
 
@@ -1726,7 +1723,6 @@ setInterval(() => {
   await loadAllTracks();
   await loadAllRacePoints();
 
-  // Récupérer le statut global des courses
   try {
     const r = await fetch(API_LIVE, { headers: { 'X-Tenant': TENANT } });
     liveData = await r.json();
