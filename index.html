@@ -775,6 +775,7 @@ const API_POINTS = 'https://api.v3.livetrail.net/api/events/points?raceId=';
 const REFRESH_MS = 60000;
 const TRACK_REFRESH_MS = 30000;
 const TOP_N = 20;
+const ACTIVE_STATUSES = ['RACE_IN_PROGRESS', 'STARTED', 'LIVE', 'ON_RACE'];
 
 const RACES = {
   GRR: { name: 'Diagonale des Fous', code: 'DDF', dist: 180, dplus: '10 200 m', start: 'Saint-Pierre',  startLon: 55.45966, startLat: -21.33975, color: '#F9B233', icon: '🏔️', relays: false },
@@ -1261,7 +1262,6 @@ async function tryFetchRunnerPosition(bib) {
     const cp = RACE_POINTS[currentRace]?.[lastPointId];
     if (!cp || cp.lat == null || cp.lon == null) return null;
 
-    // Position exacte au dernier point de passage
     return {
       bib,
       km: cp.km,
@@ -1283,7 +1283,7 @@ async function updateLiveMarkers() {
   if (!trackingActive) return;
 
   const race = liveData.find(r => r.raceId === currentRace);
-  if (!race || race.status !== 'RACE_IN_PROGRESS') {
+  if (!race || !ACTIVE_STATUSES.includes(race.status)) {
     setStatus('⏸️ Course pas encore lancée — suivi en attente', '#e88b00');
     return;
   }
@@ -1472,8 +1472,7 @@ function renderSidebar() {
   el.innerHTML = Object.entries(RACES).map(([code, info]) => {
     const race = liveData.find(r => r.raceId === code);
     const status = race ? (race.status === 'RACE_NOT_LAUNCHED' ? 'À venir' :
-                          race.status === 'RACE_IN_PROGRESS' ? '● LIVE' :
-                          race.status === 'STARTED' ? '● LIVE' : 'Terminée') : '—';
+                          ACTIVE_STATUSES.includes(race.status) ? '● LIVE' : 'Terminée') : '—';
     const registered = race?.stats?.registered ?? '—';
     return `
       <div class="sb-item ${code === currentRace ? 'active' : ''}" data-race="${code}">
@@ -1709,7 +1708,7 @@ setInterval(() => {
 
   await loadTrackUrls();
   await loadAllTracks();
-  await loadAllRacePoints();   // ✅ NOUVEAU : charge les points de passage
+  await loadAllRacePoints();
   await fetchLive();
   setInterval(fetchLive, REFRESH_MS);
 })();
