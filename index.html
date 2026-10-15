@@ -811,6 +811,7 @@ const API_RACE_LIVE = (raceId) => `${API_BASE}/races/${raceId}/live`;
 const API_RANKING = (raceId, limit, page) => `${API_BASE}/ranking/progressive/${raceId}?limit=${limit}&page=${page}`;
 const API_POINTS = `${API_BASE}/points?raceId=`;
 const API_RUNNERS = `${API_BASE}/runners`;
+const API_HEAD_RUNNERS = (raceId) => `${API_BASE}/races/${raceId}/head-runners`;
 
 const REFRESH_MS = 60000;
 const TRACK_REFRESH_MS = 30000;
@@ -1233,6 +1234,38 @@ async function fetchRankingProgressive(raceId, limit = RANKING_LIMIT, page = 0) 
 }
 
 /* ═══════════════════════════════════════════════════════════
+   ★ ZEM ★ RÉCUPÉRATION DES ÉQUIPES VIA head-runners
+   ═══════════════════════════════════════════════════════════ */
+async function fetchZemTeams() {
+  try {
+    const r = await fetch(API_HEAD_RUNNERS('ZEM'), { headers: { 'X-Tenant': TENANT } });
+    if (!r.ok) return { male: [], female: [] };
+    const d = await r.json();
+    return {
+      male: (d.scratch || []).slice(0, TOP_N),
+      female: (d.female || []).slice(0, TOP_N)
+    };
+  } catch (e) {
+    console.error('❌ fetchZemTeams:', e);
+    return { male: [], female: [] };
+  }
+}
+
+/**
+ * ★ ZEM ★ Résout le bib du relayeur actif d'une équipe ZEM.
+ * L'API renvoie le champ `index` de l'équipe qui correspond à l'`index`
+ * du teammate actuellement en course. On cherche donc le teammate dont
+ * l'index === team.index, et on récupère son bib.
+ */
+function getActiveRelayBib(team) {
+  if (!team || !Array.isArray(team.teammates)) return null;
+  const activeIndex = team.index;
+  if (activeIndex == null) return null;
+  const active = team.teammates.find(t => t.index === activeIndex);
+  return active ? active.bib : null;
+}
+
+/* ═══════════════════════════════════════════════════════════
    SIDEBAR
    ═══════════════════════════════════════════════════════════ */
 function renderSidebar() {
@@ -1248,13 +1281,14 @@ function renderSidebar() {
     const registered = race?.stats?.registered ?? '—';
     const isActive = activeRaces.includes(code);
     const isCurrent = code === currentRace;
+    const relayBadge = info.relays ? ' <span style="color:var(--fr-red);font-size:8px">(relais)</span>' : '';
 
     return `
       <div class="sb-item ${isCurrent ? 'active' : ''}" data-race="${code}">
         <div class="sb-item-h">
           <input type="checkbox" ${isActive ? 'checked' : ''} data-checkbox="${code}">
           <span class="sb-item-icon" style="color:${info.color}">${info.icon}</span>
-          <span class="sb-item-name">${info.name}</span>
+          <span class="sb-item-name">${info.name}${relayBadge}</span>
         </div>
         <div class="sb-item-meta">
           <span class="${status === '● LIVE' ? 'live' : ''}">${status}</span>
@@ -1310,30 +1344,43 @@ function updateActiveRacesInfo() {
     const info = RACES[raceId];
     if (!info) return '';
     const count = Object.values(liveMarkers).filter(m => m.raceId === raceId).length;
+    const label = info.relays ? 'équipes' : 'suivis';
     return `
       <div class="intel-row">
         <span class="k" style="color:${info.color}">
           ${info.icon} ${info.name}
         </span>
-        <span class="v green">${count} suivis</span>
+        <span class="v green">${count} ${label}</span>
       </div>
     `;
   }).join('');
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CLASSEMENTS
+   ★ ZEM ★ CLASSEMENTS (avec support équipes)
    ═══════════════════════════════════════════════════════════ */
 async function loadAndRenderRanking(raceId) {
-  const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
-  const runners = data.runners || [];
+  let runners = [];
+
+  if (RACES[raceId]?.relays) {
+    // ★ ZEM ★ : utiliser head-runners qui renvoie les équipes
+    const teams = await fetchZemTeams();
+    runners = [
+      ...teams.male.map(t => ({ ...t, sex: 'MALE' })),
+      ...teams.female.map(t => ({ ...t, sex: 'FEMALE' }))
+    ];
+  } else {
+    const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
+    runners = data.runners || [];
+  }
 
   const males = runners.filter(r => r.sex === 'MALE');
   const females = runners.filter(r => r.sex === 'FEMALE');
 
   rankingCache[raceId] = { male: males, female: females };
 
-  console.log(`📊 ${raceId}: ${males.length} H, ${females.length} F`);
+  const unit = RACES[raceId]?.relays ? 'équipes' : '';
+  console.log(`📊 ${raceId}: ${males.length} ${unit} H, ${females.length} ${unit} F`);
 }
 
 function renderRaceTabs(sex) {
@@ -1367,18 +1414,7 @@ function renderRankingPanel(containerId, countId, list, limit, sex) {
   if (!el) return;
 
   const raceId = activeRankingRace[sex];
-
-  if (RACES[raceId]?.relays) {
-    el.innerHTML = `
-      <div style="padding:16px;text-align:center;color:var(--text-1);font-family:var(--font-mono);font-size:.75em;line-height:1.7">
-        <div style="font-size:2rem;margin-bottom:8px">🔁</div>
-        <strong style="color:var(--text-0);font-size:1.05em">Course en relais</strong><br>
-        Le Zembrocal Trail se court en équipes de 4.
-      </div>
-    `;
-    if (countEl) countEl.textContent = 'Relais';
-    return;
-  }
+  const isRelay = RACES[raceId]?.relays;
 
   if (!list || !list.length) {
     el.innerHTML = '<p style="color:var(--text-2);font-size:.75em;padding:8px;font-family:var(--font-mono)">En attente des premiers passages…</p>';
@@ -1387,7 +1423,7 @@ function renderRankingPanel(containerId, countId, list, limit, sex) {
   }
 
   const runners = list.slice(0, limit);
-  if (countEl) countEl.textContent = `${list.length} coureurs`;
+  if (countEl) countEl.textContent = `${list.length} ${isRelay ? 'équipes' : 'coureurs'}`;
 
   el.innerHTML = runners.map((r, i) => {
     const cls = i === 0 ? 'p1' : i === 1 ? 'p2' : i === 2 ? 'p3' : '';
@@ -1398,15 +1434,20 @@ function renderRankingPanel(containerId, countId, list, limit, sex) {
     const liveInfo = livePos ? `<span class="pos-live">${livePos.km.toFixed(0)} km</span>` : '';
     const raceColor = RACES[raceId]?.color || '#0055A4';
 
+    // ★ ZEM ★ Affichage du nom d'équipe si dispo
+    const displayName = isRelay
+      ? (r.teamName || `Équipe #${r.bib}`)
+      : `${r.firstName || '—'} ${r.lastName || '—'}`;
+
     return `
       <div class="rank-item ${cls} ${isTracked}">
         <span class="medal">${rank}</span>
         <span class="race-badge" style="background:${raceColor};color:#fff">${RACES[raceId]?.short || raceId}</span>
-        <span class="name">${r.firstName || '—'} ${r.lastName || '—'}</span>
+        <span class="name">${isRelay ? '🔁 ' : ''}${displayName}</span>
         ${liveInfo}
         <span class="diff">${diff}</span>
         <span class="bib">#${r.bib || '—'}</span>
-        <span class="flag">${r.countryCode || '—'}</span>
+        <span class="flag">${r.nationality || r.countryCode || '—'}</span>
       </div>`;
   }).join('');
 }
@@ -1505,10 +1546,14 @@ async function tryFetchRunnerPosition(raceId, bib) {
   } catch (e) { return null; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   ★ ZEM ★ UPDATE ALL MARKERS (avec support équipes relais)
+   ═══════════════════════════════════════════════════════════ */
 async function updateAllMarkers() {
   if (!trackingActive) return;
 
-  const racesToTrack = activeRaces.filter(r => !RACES[r]?.relays);
+  // ★ ZEM ★ Suivre TOUTES les courses actives (y compris les relais)
+  const racesToTrack = [...activeRaces];
 
   if (!racesToTrack.length) {
     setStatus('⏸️ Aucune course sélectionnée', '#e88b00');
@@ -1525,30 +1570,63 @@ async function updateAllMarkers() {
       await loadRacePoints(raceId);
     }
 
-    const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
-    const runners = data.runners || [];
-    const males = runners.filter(r => r.sex === 'MALE').slice(0, TOP_N);
-    const females = runners.filter(r => r.sex === 'FEMALE').slice(0, TOP_N);
+    let males = [], females = [];
+    const isRelay = RACES[raceId]?.relays;
+
+    if (isRelay) {
+      // ★ ZEM ★ : utiliser head-runners (équipes)
+      const teams = await fetchZemTeams();
+      males = teams.male;
+      females = teams.female;
+    } else {
+      // Autres : ranking progressive classique
+      const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
+      const runners = data.runners || [];
+      males = runners.filter(r => r.sex === 'MALE').slice(0, TOP_N);
+      females = runners.filter(r => r.sex === 'FEMALE').slice(0, TOP_N);
+    }
+
     const allRunners = [...males, ...females];
 
+    // ★ ZEM ★ Pour les relais : résoudre le bib du relayeur actif.
+    // Pour les individuels : utiliser directement r.bib.
     const positions = (await Promise.all(
-      allRunners.map(r => tryFetchRunnerPosition(raceId, r.bib))
+      allRunners.map(r => {
+        if (isRelay) {
+          const activeBib = getActiveRelayBib(r);
+          if (!activeBib) return null;
+          return tryFetchRunnerPosition(raceId, activeBib).then(pos => {
+            if (!pos) return null;
+            return { ...pos, teamData: r, activeBib };
+          });
+        }
+        return tryFetchRunnerPosition(raceId, r.bib).then(pos => {
+          if (!pos) return null;
+          return { ...pos, runnerData: r };
+        });
+      })
     )).filter(Boolean);
 
     positions.forEach(pos => {
-      const isFemale = females.some(r => r.bib === pos.bib);
+      const runner = isRelay ? pos.teamData : pos.runnerData;
+      const activeBib = isRelay ? pos.activeBib : pos.bib;
+      // ★ ZEM ★ Comparaison par bib d'équipe pour les relais
+      const isFemale = females.some(r => r.bib === runner.bib);
       const raceInfo = RACES[raceId];
       const color = isFemale
         ? Cesium.Color.fromCssColorString('#EF4135')
         : Cesium.Color.fromCssColorString(raceInfo.color);
 
       const position = Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, 0);
-      const key = `${raceId}-${pos.bib}`;
-      const runner = allRunners.find(r => r.bib === pos.bib);
-      if (!runner) return;
+      const key = `${raceId}-${runner.bib}`;
+
+      // ★ ZEM ★ Nom affiché : teamName pour les relais, prénom/nom sinon
+      const displayName = isRelay
+        ? (runner.teamName || `Équipe #${runner.bib}`)
+        : `${runner.firstName} ${runner.lastName}`;
 
       const entity = viewer.entities.add({
-        name: `${runner.firstName} ${runner.lastName} (${raceInfo.short})`,
+        name: displayName,
         position: position,
         point: {
           pixelSize: 14, color: color,
@@ -1557,7 +1635,7 @@ async function updateAllMarkers() {
           disableDepthTestDistance: Number.POSITIVE_INFINITY
         },
         label: {
-          text: `${runner.firstName} ${runner.lastName}`,
+          text: displayName,
           font: 'bold 11px Inter, sans-serif',
           fillColor: Cesium.Color.WHITE,
           outlineColor: Cesium.Color.BLACK, outlineWidth: 3,
@@ -1568,15 +1646,16 @@ async function updateAllMarkers() {
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           disableDepthTestDistance: Number.POSITIVE_INFINITY
         },
-        description: buildPopupHTML(runner, pos, isFemale, raceId)
+        description: buildPopupHTML(runner, pos, isFemale, raceId, isRelay, activeBib)
       });
 
       liveMarkers[key] = {
         entity,
         raceId,
-        firstName: runner.firstName,
-        lastName: runner.lastName,
-        countryCode: runner.countryCode || runner.nationality,
+        firstName: isRelay ? '' : runner.firstName,
+        lastName: isRelay ? '' : runner.lastName,
+        teamName: isRelay ? runner.teamName : null,
+        countryCode: runner.nationality || runner.countryCode,
         gender: isFemale ? 'female' : 'male',
         lastPosition: pos
       };
@@ -1589,31 +1668,57 @@ async function updateAllMarkers() {
   const time = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   setText('ivLastUpdate', time);
   setText('lcUpdate', time);
-  setStatus(`🟢 ${totalUpdated} coureurs suivis (${racesToTrack.join(', ')}) — MAJ ${time}`, '#00a854');
+  setStatus(`🟢 ${totalUpdated} coureurs/équipes suivis (${racesToTrack.join(', ')}) — MAJ ${time}`, '#00a854');
 }
 
-function buildPopupHTML(runner, pos, isFemale, raceId) {
+/* ═══════════════════════════════════════════════════════════
+   ★ ZEM ★ POPUP (avec support équipe + liste relayeurs)
+   ═══════════════════════════════════════════════════════════ */
+function buildPopupHTML(runner, pos, isFemale, raceId, isRelay, activeBib) {
   const raceInfo = RACES[raceId];
   const color = isFemale ? '#EF4135' : raceInfo.color;
+
+  const displayName = isRelay
+    ? (runner.teamName || `Équipe #${runner.bib}`)
+    : `${runner.firstName} ${runner.lastName}`;
+
+  // ★ ZEM ★ Liste des 4 relayeurs avec le relayeur actif mis en évidence
+  let teammatesHTML = '';
+  if (isRelay && Array.isArray(runner.teammates)) {
+    teammatesHTML = `
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #eee">
+        <div style="font-size:10px;font-weight:800;color:#888;margin-bottom:4px">👥 RELAYEURS</div>
+        ${runner.teammates.map(t => {
+          const isActive = t.bib === activeBib;
+          return `<div style="font-size:11px;padding:2px 0;${isActive ? 'font-weight:800;color:' + color : 'color:#666'}">
+            ${isActive ? '▶ ' : '&nbsp;&nbsp;&nbsp;'}${t.firstName} ${t.lastName}
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+  }
+
   return `
-    <div style="font-family:Inter,sans-serif;padding:10px;min-width:220px">
+    <div style="font-family:Inter,sans-serif;padding:10px;min-width:240px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
         <span style="background:${raceInfo.color};color:#fff;font-size:9px;font-weight:800;
                      padding:2px 6px;border-radius:3px;font-family:monospace">
           ${raceInfo.short}
         </span>
         <span style="font-weight:800;font-size:14px;color:${color}">
-          ${runner.firstName} ${runner.lastName}
+          ${isRelay ? '🔁 ' : ''}${displayName}
         </span>
       </div>
       <div style="font-size:11px;color:#666;line-height:1.6">
-        <div>🏷️ Dossard <strong>#${pos.bib}</strong></div>
-        <div>🌍 ${runner.countryCode || '—'}</div>
+        <div>🏷️ ${isRelay ? 'Équipe' : 'Dossard'} <strong>#${isRelay ? runner.bib : activeBib}</strong></div>
+        ${isRelay ? `<div>🏃 Relayeur actif <strong>#${activeBib}</strong></div>` : ''}
+        <div>🌍 ${runner.nationality || runner.countryCode || '—'}</div>
         <div>📍 <strong>${pos.km.toFixed(1)} km</strong> · ${pos.name}</div>
         <div>⛰️ Altitude ${Math.round(pos.alt)} m</div>
-        <div>🏆 Classement <strong>#${pos.rank}</strong></div>
+        <div>🏆 Classement <strong>#${pos.rank || runner.ranking?.scratch}</strong></div>
         <div>⏱️ ${pos.time ? new Date(pos.time).toLocaleTimeString('fr-FR') : '—'}</div>
       </div>
+      ${teammatesHTML}
     </div>
   `;
 }
@@ -1633,10 +1738,11 @@ function updateLiveCounter() {
   if (lcRaces) {
     lcRaces.innerHTML = Object.entries(byRace).map(([raceId, counts]) => {
       const info = RACES[raceId];
+      const isRelay = info.relays;
       return `
         <div class="lc-race">
           <span style="color:${info.color}">${info.icon}</span>
-          <span>${info.short}</span>
+          <span>${info.short}${isRelay ? ' 🔁' : ''}</span>
           <span class="lc-count">${counts.total}</span>
           <span class="lc-label">(${counts.male}H/${counts.female}F)</span>
         </div>
@@ -1709,7 +1815,7 @@ function renderRightPanels() {
   if (!info) return;
 
   setText('activeIcon', info.icon);
-  setText('activeName', info.name);
+  setText('activeName', info.name + (info.relays ? ' (relais)' : ''));
   setText('activeUrl', info.start + ' → Saint-Denis · ' + info.dist + ' km · ' + info.dplus);
   setText('ivName', info.name);
   setText('ivCode', info.code);
