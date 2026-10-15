@@ -452,6 +452,17 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
   align-items:center;justify-content:center;gap:8px}
 .intel-toggle:hover{background:var(--bg-3)}
 
+/* ★ ABANDONS ★ Panneau DNF avec scroll */
+#dnfList{max-height:280px;overflow-y:auto}
+#dnfList::-webkit-scrollbar{width:5px}
+#dnfList::-webkit-scrollbar-track{background:var(--bg-2);border-radius:3px}
+#dnfList::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
+#dnfList::-webkit-scrollbar-thumb:hover{background:var(--fr-red)}
+
+/* ★ ABANDONS ★ Badge compteur clignotant */
+#dnfCount.pulse{animation:dnfPulse 2s ease-in-out infinite}
+@keyframes dnfPulse{0%,100%{opacity:1}50%{opacity:.5}}
+
 footer {
   text-align:center; padding:16px 20px;
   color:var(--text-2); font-size:.72rem;
@@ -518,6 +529,7 @@ footer .devise-fr {
   <div class="topbar-right">
     <div class="topbar-stat"><span>HEURE</span><span class="val green" id="tbTime">--:--:--</span></div>
     <div class="topbar-stat"><span>SUIVIS</span><span class="val amber" id="tbTracked">0</span></div>
+    <div class="topbar-stat"><span>ABANDONS</span><span class="val red" id="tbDnf">0</span></div>
     <div class="topbar-stat"><span>STATUT</span><span class="val" id="tbStatus">—</span></div>
     <button id="themeToggle">🌙 Sombre</button>
   </div>
@@ -667,6 +679,17 @@ footer .devise-fr {
           <div class="intel-row"><span class="k">En course</span><span class="v amber" id="gsOnRace">0</span></div>
           <div class="intel-row"><span class="k">Finishers</span><span class="v green" id="gsFinisher">0</span></div>
           <div class="intel-row"><span class="k">Abandons</span><span class="v red" id="gsDnf">0</span></div>
+        </div>
+      </div>
+
+      <!-- ★ ABANDONS ★ Nouveau panneau -->
+      <div class="intel-panel">
+        <div class="intel-head">
+          <span>🚫 ABANDONS</span>
+          <span id="dnfCount" style="color:var(--fr-red);font-weight:800">0</span>
+        </div>
+        <div class="intel-body" id="dnfList">
+          <div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">Aucun abandon détecté</div>
         </div>
       </div>
 
@@ -842,6 +865,13 @@ let activeRankingRace = { male: 'GRR', female: 'GRR' };
 let liveMarkers = {};
 let trackingActive = false;
 let trackingTimer = null;
+
+/* ★ ABANDONS ★ Snapshot des coureurs vus au dernier refresh, par course.
+   Clé = bib, valeur = { firstName, lastName, teamName, sex, nationality, lastSeenAt, lastKm }
+   Un bib qui disparaît du ranking entre 2 refresh = abandon détecté. */
+let runnersSnapshot = { GRR: {}, MAS: {}, TDB: {}, ZEM: {}, MTR: {} };
+let dnfDetected = { GRR: [], MAS: [], TDB: [], ZEM: [], MTR: [] };
+const MIN_SNAPSHOT_AGE_MS = 90000; // Ne détecte pas un DNF avant 90s (évite les faux positifs au démarrage)
 
 /* ═══════════════════════════════════════════════════════════
    CESIUM
@@ -1251,18 +1281,181 @@ async function fetchZemTeams() {
   }
 }
 
-/**
- * ★ ZEM ★ Résout le bib du relayeur actif d'une équipe ZEM.
- * L'API renvoie le champ `index` de l'équipe qui correspond à l'`index`
- * du teammate actuellement en course. On cherche donc le teammate dont
- * l'index === team.index, et on récupère son bib.
- */
 function getActiveRelayBib(team) {
   if (!team || !Array.isArray(team.teammates)) return null;
   const activeIndex = team.index;
   if (activeIndex == null) return null;
   const active = team.teammates.find(t => t.index === activeIndex);
   return active ? active.bib : null;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ★ ABANDONS ★ DÉTECTION PAR SNAPSHOT/DIFF
+   ═══════════════════════════════════════════════════════════ */
+/**
+ * Met à jour le snapshot des coureurs vus pour une course et détecte
+ * les abandons par comparaison avec le snapshot précédent.
+ * @param {string} raceId - ID de la course (GRR, MAS, etc.)
+ * @param {Array} currentRunners - Liste des coureurs actuellement dans le ranking
+ * @returns {Array} - Liste des nouveaux abandons détectés
+ */
+function detectDnf(raceId, currentRunners) {
+  const now = Date.now();
+  const prevSnapshot = runnersSnapshot[raceId] || {};
+  const currentBibs = new Set();
+
+  // Étape 1 : construire le nouveau snapshot à partir des coureurs actuels
+  const newSnapshot = {};
+  currentRunners.forEach(r => {
+    if (r.bib == null) return;
+    currentBibs.add(r.bib);
+    const prev = prevSnapshot[r.bib];
+    newSnapshot[r.bib] = {
+      bib: r.bib,
+      firstName: r.firstName || '',
+      lastName: r.lastName || '',
+      teamName: r.teamName || null,
+      sex: r.sex || 'MALE',
+      nationality: r.nationality || r.countryCode || null,
+      isRelay: RACES[raceId]?.relays || false,
+      firstSeenAt: prev?.firstSeenAt || now,
+      lastSeenAt: now,
+      lastKm: prev?.lastKm ?? null,
+      lastPointId: prev?.lastPointId ?? null
+    };
+  });
+
+  // Étape 2 : détecter les abandons (bibs présents avant, absents maintenant)
+  const newDnf = [];
+  Object.keys(prevSnapshot).forEach(bib => {
+    const bibNum = parseInt(bib, 10);
+    if (!currentBibs.has(bibNum)) {
+      const prev = prevSnapshot[bib];
+      // Filtre anti-faux-positifs : ne détecte pas si vu pour la 1ère fois il y a moins de 90s
+      if (now - prev.firstSeenAt < MIN_SNAPSHOT_AGE_MS) return;
+      // Filtre : ne signale pas 2 fois le même abandon
+      if (dnfDetected[raceId].some(d => d.bib === bibNum)) return;
+
+      newDnf.push({
+        ...prev,
+        disappearedAt: now
+      });
+    }
+  });
+
+  // Étape 3 : persister
+  runnersSnapshot[raceId] = newSnapshot;
+  if (newDnf.length) {
+    dnfDetected[raceId] = [...dnfDetected[raceId], ...newDnf];
+    console.log(`🚫 ${raceId}: +${newDnf.length} abandon(s) détecté(s) (total: ${dnfDetected[raceId].length})`);
+  }
+
+  return newDnf;
+}
+
+/**
+ * Enregistre un snapshot initial sans détecter d'abandon.
+ * Utile au premier passage pour éviter de fausses détections.
+ */
+function seedDnfSnapshot(raceId, currentRunners) {
+  const now = Date.now();
+  const snap = {};
+  currentRunners.forEach(r => {
+    if (r.bib == null) return;
+    snap[r.bib] = {
+      bib: r.bib,
+      firstName: r.firstName || '',
+      lastName: r.lastName || '',
+      teamName: r.teamName || null,
+      sex: r.sex || 'MALE',
+      nationality: r.nationality || r.countryCode || null,
+      isRelay: RACES[raceId]?.relays || false,
+      firstSeenAt: now,
+      lastSeenAt: now,
+      lastKm: null,
+      lastPointId: null
+    };
+  });
+  runnersSnapshot[raceId] = snap;
+}
+
+/**
+ * Affiche le panneau des abandons.
+ */
+function renderDnfPanel() {
+  const listEl = $('dnfList');
+  const countEl = $('dnfCount');
+  const tbEl = $('tbDnf');
+  const statEl = $('stat-dnf');
+  if (!listEl) return;
+
+  // Concatène les abandons de toutes les courses actives
+  const all = [];
+  activeRaces.forEach(raceId => {
+    (dnfDetected[raceId] || []).forEach(r => all.push({ ...r, raceId }));
+  });
+
+  // Tri : plus récents d'abord
+  all.sort((a, b) => (b.disappearedAt || 0) - (a.disappearedAt || 0));
+
+  // Mise à jour des compteurs
+  if (countEl) countEl.textContent = all.length;
+  if (tbEl) tbEl.textContent = all.length;
+  if (statEl) statEl.textContent = all.length;
+
+  // Effet de pulsation si abandons récents (< 5 min)
+  if (countEl) {
+    const recent = all.some(r => Date.now() - (r.disappearedAt || 0) < 300000);
+    countEl.classList.toggle('pulse', recent);
+  }
+
+  if (!all.length) {
+    listEl.innerHTML = '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">Aucun abandon détecté</div>';
+    return;
+  }
+
+  listEl.innerHTML = all.map(r => {
+    const info = RACES[r.raceId];
+    const name = r.isRelay
+      ? (r.teamName || `Équipe #${r.bib}`)
+      : `${r.firstName || '?'} ${r.lastName || '?'}`;
+    const timeAgo = formatTimeAgo(r.disappearedAt);
+    const lastKm = r.lastKm != null ? `km ${r.lastKm.toFixed(0)}` : '—';
+
+    return `
+      <div class="intel-row" style="align-items:flex-start;padding:6px 0">
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="background:${info.color};color:#fff;font-size:8px;font-weight:800;
+                         padding:1px 4px;border-radius:2px;font-family:monospace;flex-shrink:0">
+              ${info.short}
+            </span>
+            <span style="font-weight:700;color:var(--text-0);overflow:hidden;
+                         text-overflow:ellipsis;white-space:nowrap;font-size:10px"
+                  title="${name}">${r.isRelay ? '🔁 ' : ''}${name}</span>
+          </div>
+          <div style="display:flex;gap:8px;font-size:8px;color:var(--text-2);flex-wrap:wrap">
+            <span>#${r.bib}</span>
+            ${r.nationality ? `<span>${r.nationality}</span>` : ''}
+            <span>Vu jusqu'à <strong style="color:var(--amber)">${lastKm}</strong></span>
+            <span style="color:var(--fr-red);font-weight:700">il y a ${timeAgo}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatTimeAgo(timestamp) {
+  if (!timestamp) return '—';
+  const diff = Date.now() - timestamp;
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h${m % 60}min`;
+  return `${Math.floor(h / 24)}j`;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1309,6 +1502,7 @@ function renderSidebar() {
         activeRaces = activeRaces.filter(r => r !== raceId);
       }
       updateActiveRacesInfo();
+      renderDnfPanel();
       if (trackingActive) updateAllMarkers();
     });
   });
@@ -1363,7 +1557,6 @@ async function loadAndRenderRanking(raceId) {
   let runners = [];
 
   if (RACES[raceId]?.relays) {
-    // ★ ZEM ★ : utiliser head-runners qui renvoie les équipes
     const teams = await fetchZemTeams();
     runners = [
       ...teams.male.map(t => ({ ...t, sex: 'MALE' })),
@@ -1378,6 +1571,14 @@ async function loadAndRenderRanking(raceId) {
   const females = runners.filter(r => r.sex === 'FEMALE');
 
   rankingCache[raceId] = { male: males, female: females };
+
+  // ★ ABANDONS ★ Mise à jour du snapshot et détection DNF
+  if (!Object.keys(runnersSnapshot[raceId]).length) {
+    // Premier passage : on seed sans détecter
+    seedDnfSnapshot(raceId, runners);
+  } else {
+    detectDnf(raceId, runners);
+  }
 
   const unit = RACES[raceId]?.relays ? 'équipes' : '';
   console.log(`📊 ${raceId}: ${males.length} ${unit} H, ${females.length} ${unit} F`);
@@ -1434,7 +1635,6 @@ function renderRankingPanel(containerId, countId, list, limit, sex) {
     const liveInfo = livePos ? `<span class="pos-live">${livePos.km.toFixed(0)} km</span>` : '';
     const raceColor = RACES[raceId]?.color || '#0055A4';
 
-    // ★ ZEM ★ Affichage du nom d'équipe si dispo
     const displayName = isRelay
       ? (r.teamName || `Équipe #${r.bib}`)
       : `${r.firstName || '—'} ${r.lastName || '—'}`;
@@ -1467,11 +1667,11 @@ function renderStatsFromLive(raceLive) {
   setText('stat-registered', s.registered ?? '—');
   setText('stat-onrace', s.onRace ?? 0);
   setText('stat-finisher', s.finisher ?? 0);
-  setText('stat-dnf', s.dnf ?? 0);
+  setText('stat-dnf', dnfDetected[currentRace]?.length || 0);
   setText('gsRegistered', s.registered ?? '—');
   setText('gsOnRace', s.onRace ?? 0);
   setText('gsFinisher', s.finisher ?? 0);
-  setText('gsDnf', s.dnf ?? 0);
+  setText('gsDnf', dnfDetected[currentRace]?.length || 0);
 
   const distEl = $('distributionList');
   if (!distEl) return;
@@ -1552,7 +1752,6 @@ async function tryFetchRunnerPosition(raceId, bib) {
 async function updateAllMarkers() {
   if (!trackingActive) return;
 
-  // ★ ZEM ★ Suivre TOUTES les courses actives (y compris les relais)
   const racesToTrack = [...activeRaces];
 
   if (!racesToTrack.length) {
@@ -1574,12 +1773,10 @@ async function updateAllMarkers() {
     const isRelay = RACES[raceId]?.relays;
 
     if (isRelay) {
-      // ★ ZEM ★ : utiliser head-runners (équipes)
       const teams = await fetchZemTeams();
       males = teams.male;
       females = teams.female;
     } else {
-      // Autres : ranking progressive classique
       const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
       const runners = data.runners || [];
       males = runners.filter(r => r.sex === 'MALE').slice(0, TOP_N);
@@ -1588,8 +1785,6 @@ async function updateAllMarkers() {
 
     const allRunners = [...males, ...females];
 
-    // ★ ZEM ★ Pour les relais : résoudre le bib du relayeur actif.
-    // Pour les individuels : utiliser directement r.bib.
     const positions = (await Promise.all(
       allRunners.map(r => {
         if (isRelay) {
@@ -1610,7 +1805,6 @@ async function updateAllMarkers() {
     positions.forEach(pos => {
       const runner = isRelay ? pos.teamData : pos.runnerData;
       const activeBib = isRelay ? pos.activeBib : pos.bib;
-      // ★ ZEM ★ Comparaison par bib d'équipe pour les relais
       const isFemale = females.some(r => r.bib === runner.bib);
       const raceInfo = RACES[raceId];
       const color = isFemale
@@ -1620,7 +1814,6 @@ async function updateAllMarkers() {
       const position = Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, 0);
       const key = `${raceId}-${runner.bib}`;
 
-      // ★ ZEM ★ Nom affiché : teamName pour les relais, prénom/nom sinon
       const displayName = isRelay
         ? (runner.teamName || `Équipe #${runner.bib}`)
         : `${runner.firstName} ${runner.lastName}`;
@@ -1660,11 +1853,19 @@ async function updateAllMarkers() {
         lastPosition: pos
       };
       totalUpdated++;
+
+      // ★ ABANDONS ★ Mise à jour de lastKm dans le snapshot
+      if (runnersSnapshot[raceId]?.[runner.bib]) {
+        runnersSnapshot[raceId][runner.bib].lastKm = pos.km;
+        runnersSnapshot[raceId][runner.bib].lastPointId = pos.lastPointId;
+        runnersSnapshot[raceId][runner.bib].lastSeenAt = Date.now();
+      }
     });
   }
 
   updateLiveCounter();
   updateActiveRacesInfo();
+  renderDnfPanel();
   const time = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   setText('ivLastUpdate', time);
   setText('lcUpdate', time);
@@ -1682,7 +1883,6 @@ function buildPopupHTML(runner, pos, isFemale, raceId, isRelay, activeBib) {
     ? (runner.teamName || `Équipe #${runner.bib}`)
     : `${runner.firstName} ${runner.lastName}`;
 
-  // ★ ZEM ★ Liste des 4 relayeurs avec le relayeur actif mis en évidence
   let teammatesHTML = '';
   if (isRelay && Array.isArray(runner.teammates)) {
     teammatesHTML = `
@@ -1838,6 +2038,9 @@ async function renderAll() {
   renderRaceTabs('female');
   renderRankingPanel('rank-scratch', 'count-scratch', rankingCache[activeRankingRace.male]?.male || [], TOP_N, 'male');
   renderRankingPanel('rank-female', 'count-female', rankingCache[activeRankingRace.female]?.female || [], TOP_N, 'female');
+
+  // ★ ABANDONS ★ Rafraîchir le panneau
+  renderDnfPanel();
 }
 
 function setStatus(msg, color) {
@@ -1910,6 +2113,11 @@ setInterval(() => {
   const p = n => n.toString().padStart(2, '0');
   setText('tbTime', p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()));
 }, 1000);
+
+// ★ ABANDONS ★ Rafraîchir le panneau DNF toutes les 15s pour mettre à jour les "il y a Xmin"
+setInterval(() => {
+  if (activeRaces.length) renderDnfPanel();
+}, 15000);
 
 /* ═══════════════════════════════════════════════════════════
    INIT
