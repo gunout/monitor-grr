@@ -1245,8 +1245,9 @@ async function fetchTopRunners(raceId, sex = 'MALE', limit = TOP_N) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SUIVI EN DIRECT — API UNIQUEMENT
+   SUIVI EN DIRECT — API UNIQUEMENT + INTERPOLATION
    Utilise /runners/{bib} + mapping pointId → position
+   Interpole entre lastPassage et nextPassage selon le temps
    ═══════════════════════════════════════════════════════════ */
 async function tryFetchRunnerPosition(bib) {
   try {
@@ -1259,20 +1260,56 @@ async function tryFetchRunnerPosition(bib) {
     const lastPointId = d.lastPassage?.pointId;
     if (lastPointId == null) return null;
 
-    const cp = RACE_POINTS[currentRace]?.[lastPointId];
-    if (!cp || cp.lat == null || cp.lon == null) return null;
+    const cpLast = RACE_POINTS[currentRace]?.[lastPointId];
+    if (!cpLast || cpLast.lat == null || cpLast.lon == null) return null;
+
+    // ✅ INTERPOLATION entre lastPassage et nextPassage
+    const nextPointId = d.nextPassage?.pointId;
+    const cpNext = nextPointId != null ? RACE_POINTS[currentRace]?.[nextPointId] : null;
+
+    let km = cpLast.km;
+    let lat = cpLast.lat;
+    let lon = cpLast.lon;
+    let alt = cpLast.alt;
+    let name = cpLast.name;
+    let progress = 0;
+
+    if (cpNext && cpNext.lat != null && cpNext.lon != null) {
+      const t0 = d.lastPassage.dateTime ? new Date(d.lastPassage.dateTime).getTime() : null;
+      const t1 = d.nextPassage.dateTime ? new Date(d.nextPassage.dateTime).getTime() : null;
+      const now = Date.now();
+
+      if (t0 && t1 && t1 > t0) {
+        let ratio = (now - t0) / (t1 - t0);
+        ratio = Math.max(0, Math.min(1, ratio));
+        progress = ratio;
+
+        km  = cpLast.km  + (cpNext.km  - cpLast.km)  * ratio;
+
+        const pos = getPositionFromTrack(currentRace, km);
+        if (pos) {
+          lat = pos.lat;
+          lon = pos.lon;
+          alt = pos.alt;
+        }
+
+        name = `${cpLast.name} → ${cpNext.name} (${Math.round(ratio * 100)}%)`;
+      }
+    }
 
     return {
       bib,
-      km: cp.km,
-      name: cp.name,
+      km,
+      name,
       time: d.lastPassage.dateTime,
       rank: d.ranking?.scratch || 0,
-      lat: cp.lat,
-      lon: cp.lon,
-      alt: cp.alt,
+      lat,
+      lon,
+      alt,
       status: d.status,
-      nextPointId: d.nextPassage?.pointId
+      nextPointId,
+      progress,
+      lastPointId
     };
   } catch (e) {
     return null;
@@ -1299,7 +1336,7 @@ async function updateLiveMarkers() {
   )).filter(Boolean);
 
   if (!positions.length) {
-    setStatus('⚠️ Aucune position reçue de l\'API — vérifier les endpoints', '#e88b00');
+    setStatus('⚠️ Aucune position reçue de l\'API', '#e88b00');
     return;
   }
 
@@ -1373,14 +1410,14 @@ async function updateLiveMarkers() {
 function buildPopupHTML(runner, pos, isFemale) {
   const color = isFemale ? '#EF4135' : '#0055A4';
   return `
-    <div style="font-family:Inter,sans-serif;padding:10px;min-width:200px">
+    <div style="font-family:Inter,sans-serif;padding:10px;min-width:220px">
       <div style="font-weight:800;font-size:14px;color:${color};margin-bottom:6px">
         ${runner.firstName} ${runner.lastName}
       </div>
       <div style="font-size:11px;color:#666;line-height:1.6">
         <div>🏷️ Dossard <strong>#${pos.bib}</strong></div>
         <div>🌍 ${runner.countryCode || '—'}</div>
-        <div>📍 ${pos.km.toFixed(1)} km · ${pos.name}</div>
+        <div>📍 <strong>${pos.km.toFixed(1)} km</strong> · ${pos.name}</div>
         <div>⛰️ Altitude ${Math.round(pos.alt)} m</div>
         <div>🏆 Classement <strong>#${pos.rank}</strong></div>
         <div>⏱️ ${pos.time ? new Date(pos.time).toLocaleTimeString('fr-FR') : '—'}</div>
