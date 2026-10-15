@@ -395,7 +395,6 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
   padding:1px 4px; border-radius:3px; flex-shrink:0;
 }
 
-/* Sélecteur de courses dans le rank-grid */
 .race-tabs {
   display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap;
 }
@@ -406,7 +405,7 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
   color:var(--text-1); transition:all 0.15s;
 }
 .race-tab:hover { background:var(--bg-3); border-color:var(--fr-blue-light); }
-.race-tab.active { background:var(--fr-blue); color:#fff; border-color:var(--fr-blue); }
+.race-tab.active { color:#fff; }
 
 #status {
   text-align:center; padding:12px;
@@ -720,60 +719,80 @@ footer .devise-fr {
 
 <script>
 /* ═══════════════════════════════════════════════════════════
+   HELPER : accès DOM sécurisé
+   ═══════════════════════════════════════════════════════════ */
+function $(id) { return document.getElementById(id); }
+function setText(id, val) {
+  const el = $(id);
+  if (el) el.textContent = val;
+}
+function setHTML(id, html) {
+  const el = $(id);
+  if (el) el.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════════════
    MODE SOMBRE
    ═══════════════════════════════════════════════════════════ */
-const themeToggle = document.getElementById('themeToggle');
+const themeToggle = $('themeToggle');
 const savedTheme = localStorage.getItem('theme') || 'light';
 if (savedTheme === 'dark') {
   document.documentElement.classList.add('dark');
-  themeToggle.textContent = '☀️ Clair';
+  if (themeToggle) themeToggle.textContent = '☀️ Clair';
 }
-themeToggle.addEventListener('click', () => {
-  document.documentElement.classList.toggle('dark');
-  const isDark = document.documentElement.classList.contains('dark');
-  themeToggle.textContent = isDark ? '☀️ Clair' : '🌙 Sombre';
-  localStorage.setItem('theme', isDark ? 'dark' : 'light');
-});
+if (themeToggle) {
+  themeToggle.addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+    const isDark = document.documentElement.classList.contains('dark');
+    themeToggle.textContent = isDark ? '☀️ Clair' : '🌙 Sombre';
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  });
+}
 
 /* ═══════════════════════════════════════════════════════════
    TOGGLES PANNEAUX
    ═══════════════════════════════════════════════════════════ */
-const appEl = document.getElementById('appEl');
+const appEl = $('appEl');
 
-document.getElementById('toggleLeft').addEventListener('click', function() {
+function safeAddListener(id, event, fn) {
+  const el = $(id);
+  if (el) el.addEventListener(event, fn);
+}
+
+safeAddListener('toggleLeft', 'click', function() {
   appEl.classList.toggle('hide-left');
   if (appEl.classList.contains('hide-left')) appEl.classList.remove('focus-map');
   this.classList.toggle('active', appEl.classList.contains('hide-left'));
   setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
 });
-document.getElementById('toggleRight').addEventListener('click', function() {
+safeAddListener('toggleRight', 'click', function() {
   appEl.classList.toggle('hide-right');
   if (appEl.classList.contains('hide-right')) appEl.classList.remove('focus-map');
   this.classList.toggle('active', appEl.classList.contains('hide-right'));
   setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
 });
-document.getElementById('toggleFocus').addEventListener('click', function() {
+safeAddListener('toggleFocus', 'click', function() {
   appEl.classList.toggle('focus-map');
   if (appEl.classList.contains('focus-map')) appEl.classList.remove('hide-left', 'hide-right');
   this.classList.toggle('active', appEl.classList.contains('focus-map'));
   setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
 });
-document.getElementById('toggleRankings').addEventListener('click', function() {
+safeAddListener('toggleRankings', 'click', function() {
   appEl.classList.toggle('hide-rankings');
   this.classList.toggle('active', appEl.classList.contains('hide-rankings'));
   setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
 });
-
-document.getElementById('legendToggle').addEventListener('click', (e) => {
+safeAddListener('legendToggle', 'click', (e) => {
   e.stopPropagation();
-  document.getElementById('legend').classList.toggle('collapsed');
+  const legend = $('legend');
+  if (legend) legend.classList.toggle('collapsed');
 });
 
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (e.key === 'f' || e.key === 'F') document.getElementById('toggleFocus').click();
-  else if (e.key === 'l' || e.key === 'L') document.getElementById('toggleLeft').click();
-  else if (e.key === 'r' || e.key === 'R') document.getElementById('toggleRight').click();
+  if (e.key === 'f' || e.key === 'F') $('toggleFocus')?.click();
+  else if (e.key === 'l' || e.key === 'L') $('toggleLeft')?.click();
+  else if (e.key === 'r' || e.key === 'R') $('toggleRight')?.click();
   else if (e.key === 'Escape') {
     appEl.classList.remove('focus-map', 'hide-left', 'hide-right', 'hide-rankings');
     document.querySelectorAll('.wb-btn.gray').forEach(b => b.classList.remove('active'));
@@ -813,14 +832,13 @@ let TRACKS = { GRR: null, MAS: null, TDB: null, ZEM: null, MTR: null };
 let viewer = null;
 let liveData = [];
 let currentRace = 'GRR';
-let activeRaces = ['GRR', 'MAS'];   // ✅ Courses suivies en simultané
+let activeRaces = ['GRR', 'MAS'];
 let trackDataSources = {};
 let trackVisibility = { GRR: true, MAS: true, TDB: true, ZEM: true, MTR: true };
 
-// Classement par course et par sexe
 let rankingCache = { GRR: { male: [], female: [] }, MAS: { male: [], female: [] }, TDB: { male: [], female: [] }, ZEM: { male: [], female: [] }, MTR: { male: [], female: [] } };
-let activeRankingRace = { male: 'GRR', female: 'GRR' };  // Course active dans chaque panneau
-let liveMarkers = {};   // key = "RACEID-BIB"
+let activeRankingRace = { male: 'GRR', female: 'GRR' };
+let liveMarkers = {};
 let trackingActive = false;
 let trackingTimer = null;
 
@@ -901,10 +919,11 @@ function addRaceMarkers() {
    BOUSSOLE
    ═══════════════════════════════════════════════════════════ */
 function setupCompass() {
-  const compass = document.getElementById('compass');
-  const needle = document.getElementById('compassNeedle');
-  const angleLabel = document.getElementById('compassAngle');
-  const resetBtn = document.getElementById('compassReset');
+  const compass = $('compass');
+  const needle = $('compassNeedle');
+  const angleLabel = $('compassAngle');
+  const resetBtn = $('compassReset');
+  if (!compass) return;
 
   let isDragging = false;
   let startX = 0;
@@ -914,15 +933,14 @@ function setupCompass() {
     if (!viewer) return;
     const heading = Cesium.Math.toDegrees(viewer.camera.heading);
     const normalized = ((heading % 360) + 360) % 360;
-    needle.style.transform = `rotate(${-normalized}deg)`;
-    angleLabel.textContent = Math.round(normalized) + '°';
+    if (needle) needle.style.transform = `rotate(${-normalized}deg)`;
+    if (angleLabel) angleLabel.textContent = Math.round(normalized) + '°';
 
     const pitch = Cesium.Math.toDegrees(viewer.camera.pitch);
     const altitude = viewer.camera.positionCartographic.height;
-    document.getElementById('ivHeading').textContent = Math.round(normalized) + '°';
-    document.getElementById('ivPitch').textContent = Math.round(pitch) + '°';
-    document.getElementById('ivAltitude').textContent =
-      altitude > 1000 ? Math.round(altitude / 1000) + ' km' : Math.round(altitude) + ' m';
+    setText('ivHeading', Math.round(normalized) + '°');
+    setText('ivPitch', Math.round(pitch) + '°');
+    setText('ivAltitude', altitude > 1000 ? Math.round(altitude / 1000) + ' km' : Math.round(altitude) + ' m');
   }
 
   viewer.camera.changed.addEventListener(updateCompass);
@@ -973,7 +991,7 @@ function setupCompass() {
     resetView();
   });
 
-  resetBtn.addEventListener('click', resetView);
+  if (resetBtn) resetBtn.addEventListener('click', resetView);
 
   function resetView() {
     viewer.camera.flyTo({
@@ -1123,9 +1141,11 @@ async function loadAllRacePoints() {
 }
 
 async function loadAllTracks() {
-  const btn = document.getElementById('loadBtn');
-  btn.disabled = true;
-  btn.innerHTML = '⏳ <span class="lbl">Chargement...</span>';
+  const btn = $('loadBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ <span class="lbl">Chargement...</span>';
+  }
 
   for (const raceId of Object.keys(TRACKS)) {
     setStatus('📥 Chargement ' + raceId + '…');
@@ -1133,8 +1153,10 @@ async function loadAllTracks() {
   }
 
   const loaded = Object.keys(trackDataSources).length;
-  btn.disabled = false;
-  btn.innerHTML = '📥 <span class="lbl">Tracés</span>';
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '📥 <span class="lbl">Tracés</span>';
+  }
   setStatus('✓ ' + loaded + '/5 tracés chargés', '#00a854');
 
   viewer.camera.flyTo({
@@ -1211,11 +1233,13 @@ async function fetchRankingProgressive(raceId, limit = RANKING_LIMIT, page = 0) 
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SIDEBAR AVEC CHECKBOXES
+   SIDEBAR
    ═══════════════════════════════════════════════════════════ */
 function renderSidebar() {
-  const el = document.getElementById('sbList');
-  document.getElementById('sbCount').textContent = 'Cochez pour suivre en simultané';
+  const el = $('sbList');
+  if (!el) return;
+
+  setText('sbCount', 'Cochez pour suivre en simultané');
 
   el.innerHTML = Object.entries(RACES).map(([code, info]) => {
     const race = liveData.find(r => r.raceId === code);
@@ -1241,7 +1265,6 @@ function renderSidebar() {
     `;
   }).join('');
 
-  // Checkboxes
   el.querySelectorAll('input[data-checkbox]').forEach(cb => {
     cb.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1256,7 +1279,6 @@ function renderSidebar() {
     });
   });
 
-  // Clic sur l'item = changer de course active (pour les classements)
   el.querySelectorAll('.sb-item').forEach(item => {
     item.addEventListener('click', (e) => {
       if (e.target.tagName === 'INPUT') return;
@@ -1276,7 +1298,7 @@ function renderSidebar() {
 }
 
 function updateActiveRacesInfo() {
-  const el = document.getElementById('activeRacesInfo');
+  const el = $('activeRacesInfo');
   if (!el) return;
 
   if (!activeRaces.length) {
@@ -1287,7 +1309,6 @@ function updateActiveRacesInfo() {
   el.innerHTML = activeRaces.map(raceId => {
     const info = RACES[raceId];
     if (!info) return '';
-    const race = liveData.find(r => r.raceId === raceId);
     const count = Object.values(liveMarkers).filter(m => m.raceId === raceId).length;
     return `
       <div class="intel-row">
@@ -1301,7 +1322,7 @@ function updateActiveRacesInfo() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CLASSEMENTS MULTI-COURSES
+   CLASSEMENTS
    ═══════════════════════════════════════════════════════════ */
 async function loadAndRenderRanking(raceId) {
   const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
@@ -1317,7 +1338,7 @@ async function loadAndRenderRanking(raceId) {
 
 function renderRaceTabs(sex) {
   const containerId = sex === 'male' ? 'tabs-scratch' : 'tabs-female';
-  const el = document.getElementById(containerId);
+  const el = $(containerId);
   if (!el) return;
 
   el.innerHTML = activeRaces.map(raceId => {
@@ -1341,8 +1362,10 @@ function renderRaceTabs(sex) {
 }
 
 function renderRankingPanel(containerId, countId, list, limit, sex) {
-  const el = document.getElementById(containerId);
-  const countEl = document.getElementById(countId);
+  const el = $(containerId);
+  const countEl = $(countId);
+  if (!el) return;
+
   const raceId = activeRankingRace[sex];
 
   if (RACES[raceId]?.relays) {
@@ -1389,7 +1412,7 @@ function renderRankingPanel(containerId, countId, list, limit, sex) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   STATS (course active)
+   STATS
    ═══════════════════════════════════════════════════════════ */
 function renderStatsFromLive(raceLive) {
   if (!raceLive) return;
@@ -1397,21 +1420,20 @@ function renderStatsFromLive(raceLive) {
   const s = raceLive.stats || {};
   const status = raceLive.status || '—';
 
-  document.getElementById('ivStatus').textContent = status;
-  document.getElementById('tbStatus').textContent = status;
+  setText('ivStatus', status);
+  setText('tbStatus', status);
+  setText('stat-status', status);
+  setText('stat-registered', s.registered ?? '—');
+  setText('stat-onrace', s.onRace ?? 0);
+  setText('stat-finisher', s.finisher ?? 0);
+  setText('stat-dnf', s.dnf ?? 0);
+  setText('gsRegistered', s.registered ?? '—');
+  setText('gsOnRace', s.onRace ?? 0);
+  setText('gsFinisher', s.finisher ?? 0);
+  setText('gsDnf', s.dnf ?? 0);
 
-  document.getElementById('stat-status').textContent = status;
-  document.getElementById('stat-registered').textContent = s.registered ?? '—';
-  document.getElementById('stat-onrace').textContent = s.onRace ?? 0;
-  document.getElementById('stat-finisher').textContent = s.finisher ?? 0;
-  document.getElementById('stat-dnf').textContent = s.dnf ?? 0;
-
-  document.getElementById('gsRegistered').textContent = s.registered ?? '—';
-  document.getElementById('gsOnRace').textContent = s.onRace ?? 0;
-  document.getElementById('gsFinisher').textContent = s.finisher ?? 0;
-  document.getElementById('gsDnf').textContent = s.dnf ?? 0;
-
-  const distEl = document.getElementById('distributionList');
+  const distEl = $('distributionList');
+  if (!distEl) return;
   const dist = raceLive.distribution;
   if (dist && dist.ranges && dist.ranges.length) {
     const total = dist.total || 1;
@@ -1434,7 +1456,7 @@ function renderStatsFromLive(raceLive) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SUIVI LIVE MULTI-COURSES
+   SUIVI LIVE
    ═══════════════════════════════════════════════════════════ */
 async function tryFetchRunnerPosition(raceId, bib) {
   try {
@@ -1493,35 +1515,29 @@ async function updateAllMarkers() {
     return;
   }
 
-  // Supprimer tous les marqueurs
   Object.values(liveMarkers).forEach(m => viewer.entities.remove(m.entity));
   liveMarkers = {};
 
   let totalUpdated = 0;
 
   for (const raceId of racesToTrack) {
-    // Charger les points de passage si nécessaire
     if (!Object.keys(RACE_POINTS[raceId] || {}).length) {
       await loadRacePoints(raceId);
     }
 
-    // Charger le classement
     const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
     const runners = data.runners || [];
     const males = runners.filter(r => r.sex === 'MALE').slice(0, TOP_N);
     const females = runners.filter(r => r.sex === 'FEMALE').slice(0, TOP_N);
     const allRunners = [...males, ...females];
 
-    // Récupérer positions
     const positions = (await Promise.all(
       allRunners.map(r => tryFetchRunnerPosition(raceId, r.bib))
     )).filter(Boolean);
 
-    // Créer les marqueurs
     positions.forEach(pos => {
       const isFemale = females.some(r => r.bib === pos.bib);
       const raceInfo = RACES[raceId];
-      // Couleur : rouge pour femmes, couleur de la course pour hommes
       const color = isFemale
         ? Cesium.Color.fromCssColorString('#EF4135')
         : Cesium.Color.fromCssColorString(raceInfo.color);
@@ -1571,8 +1587,8 @@ async function updateAllMarkers() {
   updateLiveCounter();
   updateActiveRacesInfo();
   const time = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  document.getElementById('ivLastUpdate').textContent = time;
-  document.getElementById('lcUpdate').textContent = time;
+  setText('ivLastUpdate', time);
+  setText('lcUpdate', time);
   setStatus(`🟢 ${totalUpdated} coureurs suivis (${racesToTrack.join(', ')}) — MAJ ${time}`, '#00a854');
 }
 
@@ -1606,7 +1622,6 @@ function updateLiveCounter() {
   const maleCount = Object.values(liveMarkers).filter(m => m.gender === 'male').length;
   const femaleCount = Object.values(liveMarkers).filter(m => m.gender === 'female').length;
 
-  // Construire la liste par course
   const byRace = {};
   Object.values(liveMarkers).forEach(m => {
     if (!byRace[m.raceId]) byRace[m.raceId] = { male: 0, female: 0, total: 0 };
@@ -1614,20 +1629,22 @@ function updateLiveCounter() {
     byRace[m.raceId].total++;
   });
 
-  const lcRaces = document.getElementById('lcRaces');
-  lcRaces.innerHTML = Object.entries(byRace).map(([raceId, counts]) => {
-    const info = RACES[raceId];
-    return `
-      <div class="lc-race">
-        <span style="color:${info.color}">${info.icon}</span>
-        <span>${info.short}</span>
-        <span class="lc-count">${counts.total}</span>
-        <span class="lc-label">(${counts.male}H/${counts.female}F)</span>
-      </div>
-    `;
-  }).join('') || '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:4px">—</div>';
+  const lcRaces = $('lcRaces');
+  if (lcRaces) {
+    lcRaces.innerHTML = Object.entries(byRace).map(([raceId, counts]) => {
+      const info = RACES[raceId];
+      return `
+        <div class="lc-race">
+          <span style="color:${info.color}">${info.icon}</span>
+          <span>${info.short}</span>
+          <span class="lc-count">${counts.total}</span>
+          <span class="lc-label">(${counts.male}H/${counts.female}F)</span>
+        </div>
+      `;
+    }).join('') || '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:4px">—</div>';
+  }
 
-  document.getElementById('tbTracked').textContent = maleCount + femaleCount;
+  setText('tbTracked', maleCount + femaleCount);
 }
 
 async function startLiveTracking() {
@@ -1638,13 +1655,11 @@ async function startLiveTracking() {
     return;
   }
 
-  // Charger les tracés si nécessaire
   if (!TRACK_POINTS[currentRace] || !TRACK_POINTS[currentRace].length) {
     setStatus('⏳ Chargement des tracés requis…', '#e88b00');
     await loadAllTracks();
   }
 
-  // Charger les points de passage pour les courses actives
   for (const raceId of activeRaces) {
     if (!Object.keys(RACE_POINTS[raceId] || {}).length) {
       await loadRacePoints(raceId);
@@ -1652,9 +1667,11 @@ async function startLiveTracking() {
   }
 
   trackingActive = true;
-  document.getElementById('liveCounter').classList.add('visible');
-  document.getElementById('ivTrackingStatus').textContent = 'Actif';
-  document.getElementById('ivTrackingStatus').style.color = 'var(--green)';
+  const lc = $('liveCounter');
+  if (lc) lc.classList.add('visible');
+  setText('ivTrackingStatus', 'Actif');
+  const trackStatus = $('ivTrackingStatus');
+  if (trackStatus) trackStatus.style.color = 'var(--green)';
 
   setStatus('📥 Chargement des positions…');
   await updateAllMarkers();
@@ -1670,9 +1687,11 @@ function stopLiveTracking() {
   if (trackingTimer) clearInterval(trackingTimer);
   trackingTimer = null;
 
-  document.getElementById('liveCounter').classList.remove('visible');
-  document.getElementById('ivTrackingStatus').textContent = 'Inactif';
-  document.getElementById('ivTrackingStatus').style.color = 'var(--text-1)';
+  const lc = $('liveCounter');
+  if (lc) lc.classList.remove('visible');
+  setText('ivTrackingStatus', 'Inactif');
+  const trackStatus = $('ivTrackingStatus');
+  if (trackStatus) trackStatus.style.color = 'var(--text-1)';
 
   Object.values(liveMarkers).forEach(m => viewer.entities.remove(m.entity));
   liveMarkers = {};
@@ -1687,32 +1706,28 @@ function stopLiveTracking() {
 function renderRightPanels() {
   const race = liveData.find(r => r.raceId === currentRace);
   const info = RACES[currentRace];
+  if (!info) return;
 
-  document.getElementById('activeIcon').textContent = info.icon;
-  document.getElementById('activeName').textContent = info.name;
-  document.getElementById('activeUrl').textContent = info.start + ' → Saint-Denis · ' + info.dist + ' km · ' + info.dplus;
-
-  document.getElementById('ivName').textContent = info.name;
-  document.getElementById('ivCode').textContent = info.code;
-  document.getElementById('ivDist').textContent = info.dist + ' km';
-  document.getElementById('ivDplus').textContent = info.dplus;
-  document.getElementById('ivStatus').textContent = race?.status || '—';
-
-  document.getElementById('sysUpdate').textContent = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+  setText('activeIcon', info.icon);
+  setText('activeName', info.name);
+  setText('activeUrl', info.start + ' → Saint-Denis · ' + info.dist + ' km · ' + info.dplus);
+  setText('ivName', info.name);
+  setText('ivCode', info.code);
+  setText('ivDist', info.dist + ' km');
+  setText('ivDplus', info.dplus);
+  setText('ivStatus', race?.status || '—');
+  setText('sysUpdate', new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}));
 }
 
 async function renderAll() {
   renderSidebar();
   renderRightPanels();
 
-  // Charger les classements pour toutes les courses actives
   await Promise.all(activeRaces.map(raceId => loadAndRenderRanking(raceId)));
 
-  // Charger les stats de la course active
   const raceLive = await fetchRaceLive(currentRace);
   renderStatsFromLive(raceLive);
 
-  // Rendre les onglets et les classements
   renderRaceTabs('male');
   renderRaceTabs('female');
   renderRankingPanel('rank-scratch', 'count-scratch', rankingCache[activeRankingRace.male]?.male || [], TOP_N, 'male');
@@ -1720,49 +1735,55 @@ async function renderAll() {
 }
 
 function setStatus(msg, color) {
-  const el = document.getElementById('status');
-  el.textContent = msg;
-  el.style.color = color || 'var(--text-1)';
+  const el = $('status');
+  if (el) {
+    el.textContent = msg;
+    el.style.color = color || 'var(--text-1)';
+  }
 }
 
 function setupIntelToggle() {
-  const btn = document.getElementById('intelToggle');
-  const panel = document.getElementById('rightPanel');
-  const arrow = document.getElementById('intelArrow');
+  const btn = $('intelToggle');
+  const panel = $('rightPanel');
+  const arrow = $('intelArrow');
+  if (!btn || !panel) return;
 
   btn.addEventListener('click', () => {
     panel.classList.toggle('open');
-    arrow.textContent = panel.classList.contains('open') ? '▲' : '▼';
+    if (arrow) arrow.textContent = panel.classList.contains('open') ? '▲' : '▼';
   });
 }
 
 /* ═══════════════════════════════════════════════════════════
    ÉVÉNEMENTS
    ═══════════════════════════════════════════════════════════ */
-document.getElementById('loadBtn').addEventListener('click', loadAllTracks);
-document.getElementById('viewAllBtn').addEventListener('click', viewAll);
+safeAddListener('loadBtn', 'click', loadAllTracks);
+safeAddListener('viewAllBtn', 'click', viewAll);
 
-document.getElementById('trackBtn').addEventListener('click', async function() {
-  if (trackingActive) {
-    stopLiveTracking();
-    this.innerHTML = '🟢 <span class="lbl">Suivi live</span>';
-    this.classList.remove('active');
-  } else {
-    this.disabled = true;
-    this.innerHTML = '⏳ <span class="lbl">Activation…</span>';
-    await startLiveTracking();
-    this.disabled = false;
+const trackBtn = $('trackBtn');
+if (trackBtn) {
+  trackBtn.addEventListener('click', async function() {
     if (trackingActive) {
-      this.innerHTML = '⏹️ <span class="lbl">Arrêter suivi</span>';
-      this.classList.add('active');
-    } else {
+      stopLiveTracking();
       this.innerHTML = '🟢 <span class="lbl">Suivi live</span>';
       this.classList.remove('active');
+    } else {
+      this.disabled = true;
+      this.innerHTML = '⏳ <span class="lbl">Activation…</span>';
+      await startLiveTracking();
+      this.disabled = false;
+      if (trackingActive) {
+        this.innerHTML = '⏹️ <span class="lbl">Arrêter suivi</span>';
+        this.classList.add('active');
+      } else {
+        this.innerHTML = '🟢 <span class="lbl">Suivi live</span>';
+        this.classList.remove('active');
+      }
     }
-  }
-});
+  });
+}
 
-document.getElementById('toggleBtn').addEventListener('click', function() {
+safeAddListener('toggleBtn', 'click', function() {
   const allVisible = Object.values(trackVisibility).every(v => v);
   const newState = !allVisible;
   Object.keys(trackVisibility).forEach(raceId => {
@@ -1781,8 +1802,7 @@ document.querySelectorAll('.legend-row').forEach(row => {
 setInterval(() => {
   const d = new Date();
   const p = n => n.toString().padStart(2, '0');
-  document.getElementById('tbTime').textContent =
-    p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  setText('tbTime', p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()));
 }, 1000);
 
 /* ═══════════════════════════════════════════════════════════
