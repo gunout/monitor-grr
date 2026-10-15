@@ -120,6 +120,18 @@ body{font-family:var(--font-sans);background:var(--bg-0);color:var(--text-0);
 .sb-item-meta{display:flex;gap:6px;font-family:var(--font-mono);font-size:8px;
   color:var(--text-2);margin-top:2px}
 .sb-item-meta .live{color:var(--green);font-weight:700}
+.sb-item input[type="checkbox"]{
+  appearance:none;width:14px;height:14px;border:2px solid var(--border-hi);
+  border-radius:3px;cursor:pointer;position:relative;flex-shrink:0;
+  transition:all 0.15s;background:var(--bg-1);
+}
+.sb-item input[type="checkbox"]:checked{
+  background:var(--fr-blue);border-color:var(--fr-blue);
+}
+.sb-item input[type="checkbox"]:checked::after{
+  content:'✓';position:absolute;top:-2px;left:1px;
+  color:#fff;font-size:11px;font-weight:900;
+}
 
 .center{background:var(--bg-0);display:flex;flex-direction:column;overflow:hidden;min-height:0}
 
@@ -260,6 +272,10 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
 .live-counter .lc-dot.female { background:var(--fr-red); }
 .live-counter .lc-count { font-weight:700; color:var(--text-0); }
 .live-counter .lc-label { color:var(--text-2); }
+.live-counter .lc-race { 
+  display:flex; gap:6px; margin:2px 0; align-items:center; 
+  font-size:.65rem; padding-left:8px; color:var(--text-1);
+}
 
 .stats-grid {
   display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
@@ -374,6 +390,23 @@ html.dark .live-counter { background:rgba(15,20,25,.95); }
   font-family:var(--font-mono); font-size:.62rem; color:var(--text-2);
   flex-shrink:0;
 }
+.rank-item .race-badge {
+  font-family:var(--font-mono); font-size:.58rem; font-weight:700;
+  padding:1px 4px; border-radius:3px; flex-shrink:0;
+}
+
+/* Sélecteur de courses dans le rank-grid */
+.race-tabs {
+  display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap;
+}
+.race-tab {
+  font-family:var(--font-mono); font-size:.68rem; font-weight:700;
+  padding:4px 8px; border-radius:4px; cursor:pointer;
+  border:1px solid var(--border); background:var(--bg-2);
+  color:var(--text-1); transition:all 0.15s;
+}
+.race-tab:hover { background:var(--bg-3); border-color:var(--fr-blue-light); }
+.race-tab.active { background:var(--fr-blue); color:#fff; border-color:var(--fr-blue); }
 
 #status {
   text-align:center; padding:12px;
@@ -496,7 +529,7 @@ footer .devise-fr {
   <aside class="sidebar">
     <div class="sb-head">
       <div class="sb-title">◆ LES 5 COURSES</div>
-      <div class="sb-count" id="sbCount">Chargement...</div>
+      <div class="sb-count" id="sbCount">Cochez pour suivre en simultané</div>
     </div>
     <div class="sb-list" id="sbList">
       <div class="loading" style="padding:20px;font-size:10px">⏳ Chargement des courses...</div>
@@ -554,16 +587,7 @@ footer .devise-fr {
 
       <div class="live-counter" id="liveCounter">
         <div class="lc-title">◆ SUIVI EN DIRECT</div>
-        <div class="lc-row">
-          <span class="lc-dot male"></span>
-          <span class="lc-count" id="lcMale">0</span>
-          <span class="lc-label">hommes</span>
-        </div>
-        <div class="lc-row">
-          <span class="lc-dot female"></span>
-          <span class="lc-count" id="lcFemale">0</span>
-          <span class="lc-label">femmes</span>
-        </div>
+        <div id="lcRaces"></div>
         <div class="lc-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
           <span class="lc-label">MAJ</span>
           <span class="lc-count" id="lcUpdate">—</span>
@@ -606,6 +630,7 @@ footer .devise-fr {
           <h3>Top 20 · Hommes</h3>
           <span class="count" id="count-scratch">—</span>
         </div>
+        <div class="race-tabs" id="tabs-scratch"></div>
         <div class="rank-list" id="rank-scratch">Chargement…</div>
       </div>
       <div class="rank-panel female">
@@ -614,6 +639,7 @@ footer .devise-fr {
           <h3>Top 20 · Femmes</h3>
           <span class="count" id="count-female">—</span>
         </div>
+        <div class="race-tabs" id="tabs-female"></div>
         <div class="rank-list" id="rank-female">Chargement…</div>
       </div>
     </div>
@@ -629,13 +655,9 @@ footer .devise-fr {
     <div class="rs-head">◆ INTELLIGENCE</div>
     <div class="rs-body">
       <div class="intel-panel">
-        <div class="intel-head"><span>📊 COURSE ACTIVE</span></div>
-        <div class="intel-body">
-          <div class="intel-row"><span class="k">Nom</span><span class="v cyan" id="ivName">—</span></div>
-          <div class="intel-row"><span class="k">Code</span><span class="v" id="ivCode">—</span></div>
-          <div class="intel-row"><span class="k">Distance</span><span class="v amber" id="ivDist">—</span></div>
-          <div class="intel-row"><span class="k">Dénivelé</span><span class="v red" id="ivDplus">—</span></div>
-          <div class="intel-row"><span class="k">Statut</span><span class="v green" id="ivStatus">—</span></div>
+        <div class="intel-head"><span>📊 COURSES SUIVIES</span></div>
+        <div class="intel-body" id="activeRacesInfo">
+          <div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>
         </div>
       </div>
 
@@ -658,9 +680,7 @@ footer .devise-fr {
 
       <div class="intel-panel">
         <div class="intel-head"><span>🟢 SUIVI EN DIRECT</span></div>
-        <div class="intel-body">
-          <div class="intel-row"><span class="k">Hommes suivis</span><span class="v cyan" id="ivMale">0</span></div>
-          <div class="intel-row"><span class="k">Femmes suivies</span><span class="v red" id="ivFemale">0</span></div>
+        <div class="intel-body" id="liveTrackingInfo">
           <div class="intel-row"><span class="k">Dernière MAJ</span><span class="v green" id="ivLastUpdate">—</span></div>
           <div class="intel-row"><span class="k">Rafraîchissement</span><span class="v amber">30 s</span></div>
           <div class="intel-row"><span class="k">Statut</span><span class="v" id="ivTrackingStatus">Inactif</span></div>
@@ -674,20 +694,6 @@ footer .devise-fr {
           <div class="intel-row"><span class="k">Inclinaison</span><span class="v amber" id="ivPitch">-35°</span></div>
           <div class="intel-row"><span class="k">Altitude</span><span class="v green" id="ivAltitude">35 km</span></div>
           <div class="intel-row"><span class="k">Raccourci</span><span class="v">← →</span></div>
-        </div>
-      </div>
-
-      <div class="intel-panel">
-        <div class="intel-head"><span>🏆 TOP COUREURS</span></div>
-        <div class="intel-body" id="topList">
-          <div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>
-        </div>
-      </div>
-
-      <div class="intel-panel">
-        <div class="intel-head"><span>📂 CATÉGORIES</span></div>
-        <div class="intel-body" id="catList">
-          <div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>
         </div>
       </div>
 
@@ -783,7 +789,6 @@ const API_BASE = 'https://api.v3.livetrail.net/api/events';
 const API_LIVE = `${API_BASE}/races/lives`;
 const API_RACES = `${API_BASE}/races/`;
 const API_RACE_LIVE = (raceId) => `${API_BASE}/races/${raceId}/live`;
-const API_HEAD_RUNNERS = (raceId) => `${API_BASE}/races/${raceId}/head-runners`;
 const API_RANKING = (raceId, limit, page) => `${API_BASE}/ranking/progressive/${raceId}?limit=${limit}&page=${page}`;
 const API_POINTS = `${API_BASE}/points?raceId=`;
 const API_RUNNERS = `${API_BASE}/runners`;
@@ -791,15 +796,15 @@ const API_RUNNERS = `${API_BASE}/runners`;
 const REFRESH_MS = 60000;
 const TRACK_REFRESH_MS = 30000;
 const TOP_N = 20;
-const RANKING_LIMIT = 500;   // ✅ 500 pour avoir 20+ femmes
+const RANKING_LIMIT = 500;
 const ACTIVE_STATUSES = ['RACE_IN_PROGRESS', 'STARTED', 'LIVE', 'ON_RACE'];
 
 const RACES = {
-  GRR: { name: 'Diagonale des Fous', code: 'DDF', dist: 180, dplus: '10 200 m', start: 'Saint-Pierre',  startLon: 55.45966, startLat: -21.33975, color: '#F9B233', icon: '🏔️', relays: false },
-  MAS: { name: 'Mascareignes',       code: 'MAS', dist: 74,  dplus: '3 800 m',  start: 'Hell-Bourg',    startLon: 55.52054, startLat: -21.0699,  color: '#009E60', icon: '🌿', relays: false },
-  TDB: { name: 'Trail de Bourbon',   code: 'TDB', dist: 106, dplus: '6 200 m',  start: 'Cilaos',        startLon: 55.471,   startLat: -21.134,   color: '#1B5DA8', icon: '💧', relays: false },
-  ZEM: { name: 'Zembrocal Trail',    code: 'ZEM', dist: 160, dplus: '8 460 m',  start: 'Saint-Joseph',  startLon: 55.62,    startLat: -21.378,   color: '#E4032E', icon: '🔁', relays: true },
-  MTR: { name: 'Métis Trail',        code: 'MTR', dist: 51,  dplus: '2 500 m',  start: 'Saint-Paul',    startLon: 55.271,   startLat: -21.010,   color: '#fc8230', icon: '🌅', relays: false }
+  GRR: { name: 'Diagonale des Fous', code: 'DDF', dist: 180, dplus: '10 200 m', start: 'Saint-Pierre',  startLon: 55.45966, startLat: -21.33975, color: '#F9B233', icon: '🏔️', relays: false, short: 'DDF' },
+  MAS: { name: 'Mascareignes',       code: 'MAS', dist: 74,  dplus: '3 800 m',  start: 'Hell-Bourg',    startLon: 55.52054, startLat: -21.0699,  color: '#009E60', icon: '🌿', relays: false, short: 'MAS' },
+  TDB: { name: 'Trail de Bourbon',   code: 'TDB', dist: 106, dplus: '6 200 m',  start: 'Cilaos',        startLon: 55.471,   startLat: -21.134,   color: '#1B5DA8', icon: '💧', relays: false, short: 'TDB' },
+  ZEM: { name: 'Zembrocal Trail',    code: 'ZEM', dist: 160, dplus: '8 460 m',  start: 'Saint-Joseph',  startLon: 55.62,    startLat: -21.378,   color: '#E4032E', icon: '🔁', relays: true,  short: 'ZEM' },
+  MTR: { name: 'Métis Trail',        code: 'MTR', dist: 51,  dplus: '2 500 m',  start: 'Saint-Paul',    startLon: 55.271,   startLat: -21.010,   color: '#fc8230', icon: '🌅', relays: false, short: 'MTR' }
 };
 
 let TRACK_POINTS = { GRR: [], MAS: [], TDB: [], ZEM: [], MTR: [] };
@@ -808,14 +813,16 @@ let TRACKS = { GRR: null, MAS: null, TDB: null, ZEM: null, MTR: null };
 let viewer = null;
 let liveData = [];
 let currentRace = 'GRR';
+let activeRaces = ['GRR', 'MAS'];   // ✅ Courses suivies en simultané
 let trackDataSources = {};
 let trackVisibility = { GRR: true, MAS: true, TDB: true, ZEM: true, MTR: true };
 
-let liveMarkers = {};
-let liveRunners = { male: [], female: [] };
+// Classement par course et par sexe
+let rankingCache = { GRR: { male: [], female: [] }, MAS: { male: [], female: [] }, TDB: { male: [], female: [] }, ZEM: { male: [], female: [] }, MTR: { male: [], female: [] } };
+let activeRankingRace = { male: 'GRR', female: 'GRR' };  // Course active dans chaque panneau
+let liveMarkers = {};   // key = "RACEID-BIB"
 let trackingActive = false;
 let trackingTimer = null;
-let currentRanking = { male: [], female: [] };
 
 /* ═══════════════════════════════════════════════════════════
    CESIUM
@@ -1181,22 +1188,16 @@ function getPositionFromTrack(raceId, km) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   FETCH RACE LIVE
+   FETCH
    ═══════════════════════════════════════════════════════════ */
 async function fetchRaceLive(raceId) {
   try {
     const r = await fetch(API_RACE_LIVE(raceId), { headers: { 'X-Tenant': TENANT } });
     if (!r.ok) return null;
     return await r.json();
-  } catch (e) {
-    return null;
-  }
+  } catch (e) { return null; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FETCH RANKING PROGRESSIVE (classement officiel)
-   limit=500 pour avoir 20+ femmes
-   ═══════════════════════════════════════════════════════════ */
 async function fetchRankingProgressive(raceId, limit = RANKING_LIMIT, page = 0) {
   try {
     const r = await fetch(API_RANKING(raceId, limit, page), { headers: { 'X-Tenant': TENANT } });
@@ -1210,7 +1211,97 @@ async function fetchRankingProgressive(raceId, limit = RANKING_LIMIT, page = 0) 
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RENDER TOP 20 H/F (avec limit=500)
+   SIDEBAR AVEC CHECKBOXES
+   ═══════════════════════════════════════════════════════════ */
+function renderSidebar() {
+  const el = document.getElementById('sbList');
+  document.getElementById('sbCount').textContent = 'Cochez pour suivre en simultané';
+
+  el.innerHTML = Object.entries(RACES).map(([code, info]) => {
+    const race = liveData.find(r => r.raceId === code);
+    const status = race ? (race.status === 'RACE_NOT_LAUNCHED' ? 'À venir' :
+                          ACTIVE_STATUSES.includes(race.status) ? '● LIVE' : 'Terminée') : '—';
+    const registered = race?.stats?.registered ?? '—';
+    const isActive = activeRaces.includes(code);
+    const isCurrent = code === currentRace;
+
+    return `
+      <div class="sb-item ${isCurrent ? 'active' : ''}" data-race="${code}">
+        <div class="sb-item-h">
+          <input type="checkbox" ${isActive ? 'checked' : ''} data-checkbox="${code}">
+          <span class="sb-item-icon" style="color:${info.color}">${info.icon}</span>
+          <span class="sb-item-name">${info.name}</span>
+        </div>
+        <div class="sb-item-meta">
+          <span class="${status === '● LIVE' ? 'live' : ''}">${status}</span>
+          <span>${info.dist} km</span>
+          <span>${registered} inscrits</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Checkboxes
+  el.querySelectorAll('input[data-checkbox]').forEach(cb => {
+    cb.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const raceId = cb.dataset.checkbox;
+      if (cb.checked) {
+        if (!activeRaces.includes(raceId)) activeRaces.push(raceId);
+      } else {
+        activeRaces = activeRaces.filter(r => r !== raceId);
+      }
+      updateActiveRacesInfo();
+      if (trackingActive) updateAllMarkers();
+    });
+  });
+
+  // Clic sur l'item = changer de course active (pour les classements)
+  el.querySelectorAll('.sb-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      currentRace = item.dataset.race;
+      activeRankingRace.male = currentRace;
+      activeRankingRace.female = currentRace;
+      renderAll();
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(55.536, -21.115, 35000),
+        orientation: { heading: 0, pitch: Cesium.Math.toRadians(-35), roll: 0 },
+        duration: 1.5
+      });
+    });
+  });
+
+  updateActiveRacesInfo();
+}
+
+function updateActiveRacesInfo() {
+  const el = document.getElementById('activeRacesInfo');
+  if (!el) return;
+
+  if (!activeRaces.length) {
+    el.innerHTML = '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">Aucune course sélectionnée</div>';
+    return;
+  }
+
+  el.innerHTML = activeRaces.map(raceId => {
+    const info = RACES[raceId];
+    if (!info) return '';
+    const race = liveData.find(r => r.raceId === raceId);
+    const count = Object.values(liveMarkers).filter(m => m.raceId === raceId).length;
+    return `
+      <div class="intel-row">
+        <span class="k" style="color:${info.color}">
+          ${info.icon} ${info.name}
+        </span>
+        <span class="v green">${count} suivis</span>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CLASSEMENTS MULTI-COURSES
    ═══════════════════════════════════════════════════════════ */
 async function loadAndRenderRanking(raceId) {
   const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
@@ -1219,27 +1310,47 @@ async function loadAndRenderRanking(raceId) {
   const males = runners.filter(r => r.sex === 'MALE');
   const females = runners.filter(r => r.sex === 'FEMALE');
 
-  currentRanking.male = males;
-  currentRanking.female = females;
+  rankingCache[raceId] = { male: males, female: females };
 
-  console.log(`📊 Classement ${raceId}: ${males.length} H, ${females.length} F (sur ${runners.length} récupérés)`);
+  console.log(`📊 ${raceId}: ${males.length} H, ${females.length} F`);
+}
 
-  renderRankingPanel('rank-scratch', 'count-scratch', males, TOP_N, 'male');
-  renderRankingPanel('rank-female', 'count-female', females, TOP_N, 'female');
-  renderTopList(males.slice(0, 8), 'male');
+function renderRaceTabs(sex) {
+  const containerId = sex === 'male' ? 'tabs-scratch' : 'tabs-female';
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  el.innerHTML = activeRaces.map(raceId => {
+    const info = RACES[raceId];
+    const isActive = activeRankingRace[sex] === raceId;
+    return `<button class="race-tab ${isActive ? 'active' : ''}" data-race="${raceId}" data-sex="${sex}"
+      style="${isActive ? 'background:' + info.color + ';border-color:' + info.color : ''}">
+      ${info.icon} ${info.short}
+    </button>`;
+  }).join('');
+
+  el.querySelectorAll('.race-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      activeRankingRace[sex] = tab.dataset.race;
+      renderRaceTabs('male');
+      renderRaceTabs('female');
+      renderRankingPanel('rank-scratch', 'count-scratch', rankingCache[activeRankingRace.male]?.male || [], TOP_N, 'male');
+      renderRankingPanel('rank-female', 'count-female', rankingCache[activeRankingRace.female]?.female || [], TOP_N, 'female');
+    });
+  });
 }
 
 function renderRankingPanel(containerId, countId, list, limit, sex) {
   const el = document.getElementById(containerId);
   const countEl = document.getElementById(countId);
+  const raceId = activeRankingRace[sex];
 
-  if (RACES[currentRace]?.relays) {
+  if (RACES[raceId]?.relays) {
     el.innerHTML = `
       <div style="padding:16px;text-align:center;color:var(--text-1);font-family:var(--font-mono);font-size:.75em;line-height:1.7">
         <div style="font-size:2rem;margin-bottom:8px">🔁</div>
         <strong style="color:var(--text-0);font-size:1.05em">Course en relais</strong><br>
-        Le Zembrocal Trail se court en équipes de 4.<br>
-        Classements disponibles par équipe.
+        Le Zembrocal Trail se court en équipes de 4.
       </div>
     `;
     if (countEl) countEl.textContent = 'Relais';
@@ -1257,15 +1368,17 @@ function renderRankingPanel(containerId, countId, list, limit, sex) {
 
   el.innerHTML = runners.map((r, i) => {
     const cls = i === 0 ? 'p1' : i === 1 ? 'p2' : i === 2 ? 'p3' : '';
-    const isTracked = liveMarkers[r.bib] ? 'tracked' : '';
+    const isTracked = liveMarkers[`${raceId}-${r.bib}`] ? 'tracked' : '';
     const rank = r.ranking?.scratch || (i + 1);
     const diff = r.diffToFirst != null && r.diffToFirst > 0 ? `+${r.diffToFirst}s` : '—';
-    const livePos = liveMarkers[r.bib]?.lastPosition;
+    const livePos = liveMarkers[`${raceId}-${r.bib}`]?.lastPosition;
     const liveInfo = livePos ? `<span class="pos-live">${livePos.km.toFixed(0)} km</span>` : '';
+    const raceColor = RACES[raceId]?.color || '#0055A4';
 
     return `
       <div class="rank-item ${cls} ${isTracked}">
         <span class="medal">${rank}</span>
+        <span class="race-badge" style="background:${raceColor};color:#fff">${RACES[raceId]?.short || raceId}</span>
         <span class="name">${r.firstName || '—'} ${r.lastName || '—'}</span>
         ${liveInfo}
         <span class="diff">${diff}</span>
@@ -1275,29 +1388,8 @@ function renderRankingPanel(containerId, countId, list, limit, sex) {
   }).join('');
 }
 
-function renderTopList(topRunners, sex) {
-  const el = document.getElementById('topList');
-  if (!topRunners.length) {
-    el.innerHTML = '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>';
-    return;
-  }
-
-  el.innerHTML = topRunners.map((r, i) => {
-    const rank = r.ranking?.scratch || (i + 1);
-    const diff = r.diffToFirst != null && r.diffToFirst > 0 ? `+${r.diffToFirst}s` : '★';
-    return `
-      <div class="intel-row">
-        <span class="k" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">
-          ${rank}. ${r.firstName} ${r.lastName}
-        </span>
-        <span class="v amber">${diff}</span>
-      </div>
-    `;
-  }).join('');
-}
-
 /* ═══════════════════════════════════════════════════════════
-   RENDER STATS
+   STATS (course active)
    ═══════════════════════════════════════════════════════════ */
 function renderStatsFromLive(raceLive) {
   if (!raceLive) return;
@@ -1342,9 +1434,9 @@ function renderStatsFromLive(raceLive) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SUIVI LIVE (marqueurs)
+   SUIVI LIVE MULTI-COURSES
    ═══════════════════════════════════════════════════════════ */
-async function tryFetchRunnerPosition(bib) {
+async function tryFetchRunnerPosition(raceId, bib) {
   try {
     const r = await fetch(`${API_RUNNERS}/${bib}`, { headers: { 'X-Tenant': TENANT } });
     if (!r.ok) return null;
@@ -1353,11 +1445,11 @@ async function tryFetchRunnerPosition(bib) {
     const lastPointId = d.lastPassage?.pointId;
     if (lastPointId == null) return null;
 
-    const cpLast = RACE_POINTS[currentRace]?.[lastPointId];
+    const cpLast = RACE_POINTS[raceId]?.[lastPointId];
     if (!cpLast || cpLast.lat == null || cpLast.lon == null) return null;
 
     const nextPointId = d.nextPassage?.pointId;
-    const cpNext = nextPointId != null ? RACE_POINTS[currentRace]?.[nextPointId] : null;
+    const cpNext = nextPointId != null ? RACE_POINTS[raceId]?.[nextPointId] : null;
 
     let km = cpLast.km, lat = cpLast.lat, lon = cpLast.lon, alt = cpLast.alt;
     let name = cpLast.name;
@@ -1374,7 +1466,7 @@ async function tryFetchRunnerPosition(bib) {
         progress = ratio;
         km = cpLast.km + (cpNext.km - cpLast.km) * ratio;
 
-        const pos = getPositionFromTrack(currentRace, km);
+        const pos = getPositionFromTrack(raceId, km);
         if (pos) { lat = pos.lat; lon = pos.lon; alt = pos.alt; }
         name = `${cpLast.name} → ${cpNext.name} (${Math.round(ratio * 100)}%)`;
       }
@@ -1391,46 +1483,56 @@ async function tryFetchRunnerPosition(bib) {
   } catch (e) { return null; }
 }
 
-async function updateLiveMarkers() {
+async function updateAllMarkers() {
   if (!trackingActive) return;
 
-  const allRunners = [...liveRunners.male, ...liveRunners.female];
-  if (!allRunners.length) {
-    setStatus('⏸️ Aucun coureur à suivre', '#e88b00');
+  const racesToTrack = activeRaces.filter(r => !RACES[r]?.relays);
+
+  if (!racesToTrack.length) {
+    setStatus('⏸️ Aucune course sélectionnée', '#e88b00');
     return;
   }
 
-  const positions = (await Promise.all(
-    allRunners.map(r => tryFetchRunnerPosition(r.bib))
-  )).filter(Boolean);
+  // Supprimer tous les marqueurs
+  Object.values(liveMarkers).forEach(m => viewer.entities.remove(m.entity));
+  liveMarkers = {};
 
-  if (!positions.length) {
-    setStatus('⚠️ Aucune position reçue', '#e88b00');
-    return;
-  }
+  let totalUpdated = 0;
 
-  let updated = 0;
-  positions.forEach(pos => {
-    if (!pos || !pos.lat || !pos.lon) return;
+  for (const raceId of racesToTrack) {
+    // Charger les points de passage si nécessaire
+    if (!Object.keys(RACE_POINTS[raceId] || {}).length) {
+      await loadRacePoints(raceId);
+    }
 
-    const isFemale = liveRunners.female.some(r => r.bib === pos.bib);
-    const color = isFemale
-      ? Cesium.Color.fromCssColorString('#EF4135')
-      : Cesium.Color.fromCssColorString('#0055A4');
+    // Charger le classement
+    const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
+    const runners = data.runners || [];
+    const males = runners.filter(r => r.sex === 'MALE').slice(0, TOP_N);
+    const females = runners.filter(r => r.sex === 'FEMALE').slice(0, TOP_N);
+    const allRunners = [...males, ...females];
 
-    const position = Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, 0);
-    const existing = liveMarkers[pos.bib];
+    // Récupérer positions
+    const positions = (await Promise.all(
+      allRunners.map(r => tryFetchRunnerPosition(raceId, r.bib))
+    )).filter(Boolean);
 
-    if (existing) {
-      existing.entity.position = position;
-      existing.entity.description = buildPopupHTML(existing, pos, isFemale);
-      existing.lastPosition = pos;
-    } else {
+    // Créer les marqueurs
+    positions.forEach(pos => {
+      const isFemale = females.some(r => r.bib === pos.bib);
+      const raceInfo = RACES[raceId];
+      // Couleur : rouge pour femmes, couleur de la course pour hommes
+      const color = isFemale
+        ? Cesium.Color.fromCssColorString('#EF4135')
+        : Cesium.Color.fromCssColorString(raceInfo.color);
+
+      const position = Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, 0);
+      const key = `${raceId}-${pos.bib}`;
       const runner = allRunners.find(r => r.bib === pos.bib);
       if (!runner) return;
 
       const entity = viewer.entities.add({
-        name: `${runner.firstName} ${runner.lastName}`,
+        name: `${runner.firstName} ${runner.lastName} (${raceInfo.short})`,
         position: position,
         point: {
           pixelSize: 14, color: color,
@@ -1450,34 +1552,43 @@ async function updateLiveMarkers() {
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
           disableDepthTestDistance: Number.POSITIVE_INFINITY
         },
-        description: buildPopupHTML(runner, pos, isFemale)
+        description: buildPopupHTML(runner, pos, isFemale, raceId)
       });
 
-      liveMarkers[pos.bib] = {
+      liveMarkers[key] = {
         entity,
+        raceId,
         firstName: runner.firstName,
         lastName: runner.lastName,
         countryCode: runner.countryCode || runner.nationality,
         gender: isFemale ? 'female' : 'male',
         lastPosition: pos
       };
-    }
-    updated++;
-  });
+      totalUpdated++;
+    });
+  }
 
   updateLiveCounter();
+  updateActiveRacesInfo();
   const time = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   document.getElementById('ivLastUpdate').textContent = time;
   document.getElementById('lcUpdate').textContent = time;
-  setStatus(`🟢 ${updated} coureurs suivis — MAJ ${time}`, '#00a854');
+  setStatus(`🟢 ${totalUpdated} coureurs suivis (${racesToTrack.join(', ')}) — MAJ ${time}`, '#00a854');
 }
 
-function buildPopupHTML(runner, pos, isFemale) {
-  const color = isFemale ? '#EF4135' : '#0055A4';
+function buildPopupHTML(runner, pos, isFemale, raceId) {
+  const raceInfo = RACES[raceId];
+  const color = isFemale ? '#EF4135' : raceInfo.color;
   return `
     <div style="font-family:Inter,sans-serif;padding:10px;min-width:220px">
-      <div style="font-weight:800;font-size:14px;color:${color};margin-bottom:6px">
-        ${runner.firstName} ${runner.lastName}
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="background:${raceInfo.color};color:#fff;font-size:9px;font-weight:800;
+                     padding:2px 6px;border-radius:3px;font-family:monospace">
+          ${raceInfo.short}
+        </span>
+        <span style="font-weight:800;font-size:14px;color:${color}">
+          ${runner.firstName} ${runner.lastName}
+        </span>
       </div>
       <div style="font-size:11px;color:#666;line-height:1.6">
         <div>🏷️ Dossard <strong>#${pos.bib}</strong></div>
@@ -1494,43 +1605,50 @@ function buildPopupHTML(runner, pos, isFemale) {
 function updateLiveCounter() {
   const maleCount = Object.values(liveMarkers).filter(m => m.gender === 'male').length;
   const femaleCount = Object.values(liveMarkers).filter(m => m.gender === 'female').length;
-  document.getElementById('lcMale').textContent = maleCount;
-  document.getElementById('lcFemale').textContent = femaleCount;
-  document.getElementById('ivMale').textContent = maleCount;
-  document.getElementById('ivFemale').textContent = femaleCount;
+
+  // Construire la liste par course
+  const byRace = {};
+  Object.values(liveMarkers).forEach(m => {
+    if (!byRace[m.raceId]) byRace[m.raceId] = { male: 0, female: 0, total: 0 };
+    byRace[m.raceId][m.gender]++;
+    byRace[m.raceId].total++;
+  });
+
+  const lcRaces = document.getElementById('lcRaces');
+  lcRaces.innerHTML = Object.entries(byRace).map(([raceId, counts]) => {
+    const info = RACES[raceId];
+    return `
+      <div class="lc-race">
+        <span style="color:${info.color}">${info.icon}</span>
+        <span>${info.short}</span>
+        <span class="lc-count">${counts.total}</span>
+        <span class="lc-label">(${counts.male}H/${counts.female}F)</span>
+      </div>
+    `;
+  }).join('') || '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:4px">—</div>';
+
   document.getElementById('tbTracked').textContent = maleCount + femaleCount;
 }
 
 async function startLiveTracking() {
   if (trackingActive) return;
 
+  if (!activeRaces.length) {
+    setStatus('⚠️ Cochez au moins une course dans la sidebar', '#e88b00');
+    return;
+  }
+
+  // Charger les tracés si nécessaire
   if (!TRACK_POINTS[currentRace] || !TRACK_POINTS[currentRace].length) {
     setStatus('⏳ Chargement des tracés requis…', '#e88b00');
     await loadAllTracks();
   }
 
-  if (!Object.keys(RACE_POINTS[currentRace] || {}).length) {
-    setStatus('⏳ Chargement des points de passage…', '#e88b00');
-    await loadRacePoints(currentRace);
-  }
-
-  if (RACES[currentRace]?.relays) {
-    setStatus('🔁 Zembrocal en relais — suivi individuel indisponible', '#e88b00');
-    return;
-  }
-
-  setStatus('📥 Chargement du classement officiel…');
-  const data = await fetchRankingProgressive(currentRace, RANKING_LIMIT, 0);
-  const runners = data.runners || [];
-
-  liveRunners.male = runners.filter(r => r.sex === 'MALE').slice(0, TOP_N);
-  liveRunners.female = runners.filter(r => r.sex === 'FEMALE').slice(0, TOP_N);
-
-  console.log(`🎯 Suivi: ${liveRunners.male.length} H + ${liveRunners.female.length} F`);
-
-  if (!liveRunners.male.length && !liveRunners.female.length) {
-    setStatus('❌ Aucun coureur récupéré', 'var(--fr-red)');
-    return;
+  // Charger les points de passage pour les courses actives
+  for (const raceId of activeRaces) {
+    if (!Object.keys(RACE_POINTS[raceId] || {}).length) {
+      await loadRacePoints(raceId);
+    }
   }
 
   trackingActive = true;
@@ -1538,12 +1656,13 @@ async function startLiveTracking() {
   document.getElementById('ivTrackingStatus').textContent = 'Actif';
   document.getElementById('ivTrackingStatus').style.color = 'var(--green)';
 
-  await updateLiveMarkers();
+  setStatus('📥 Chargement des positions…');
+  await updateAllMarkers();
 
   if (trackingTimer) clearInterval(trackingTimer);
-  trackingTimer = setInterval(updateLiveMarkers, TRACK_REFRESH_MS);
+  trackingTimer = setInterval(updateAllMarkers, TRACK_REFRESH_MS);
 
-  setStatus('🟢 Suivi en direct activé (refresh 30s)', '#00a854');
+  setStatus('🟢 Suivi multi-courses activé (refresh 30s)', '#00a854');
 }
 
 function stopLiveTracking() {
@@ -1558,55 +1677,13 @@ function stopLiveTracking() {
   Object.values(liveMarkers).forEach(m => viewer.entities.remove(m.entity));
   liveMarkers = {};
   updateLiveCounter();
+  updateActiveRacesInfo();
   setStatus('⏸️ Suivi en direct arrêté', '#e88b00');
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RENDU
+   RENDER
    ═══════════════════════════════════════════════════════════ */
-function renderSidebar() {
-  const el = document.getElementById('sbList');
-  document.getElementById('sbCount').textContent = '5 courses · ' +
-    (liveData.length ? liveData.reduce((s,r) => s + (r.stats?.registered || 0), 0) + ' inscrits' : '—');
-
-  el.innerHTML = Object.entries(RACES).map(([code, info]) => {
-    const race = liveData.find(r => r.raceId === code);
-    const status = race ? (race.status === 'RACE_NOT_LAUNCHED' ? 'À venir' :
-                          ACTIVE_STATUSES.includes(race.status) ? '● LIVE' : 'Terminée') : '—';
-    const registered = race?.stats?.registered ?? '—';
-    return `
-      <div class="sb-item ${code === currentRace ? 'active' : ''}" data-race="${code}">
-        <div class="sb-item-h">
-          <span class="sb-item-icon" style="color:${info.color}">${info.icon}</span>
-          <span class="sb-item-name">${info.name}</span>
-        </div>
-        <div class="sb-item-meta">
-          <span class="${status === '● LIVE' ? 'live' : ''}">${status}</span>
-          <span>${info.dist} km</span>
-          <span>${registered} inscrits</span>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  el.querySelectorAll('.sb-item').forEach(item => {
-    item.addEventListener('click', () => {
-      if (trackingActive && item.dataset.race !== currentRace) {
-        stopLiveTracking();
-        document.getElementById('trackBtn').innerHTML = '🟢 <span class="lbl">Suivi live</span>';
-        document.getElementById('trackBtn').classList.remove('active');
-      }
-      currentRace = item.dataset.race;
-      renderAll();
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(55.536, -21.115, 35000),
-        orientation: { heading: 0, pitch: Cesium.Math.toRadians(-35), roll: 0 },
-        duration: 1.5
-      });
-    });
-  });
-}
-
 function renderRightPanels() {
   const race = liveData.find(r => r.raceId === currentRace);
   const info = RACES[currentRace];
@@ -1628,10 +1705,18 @@ async function renderAll() {
   renderSidebar();
   renderRightPanels();
 
+  // Charger les classements pour toutes les courses actives
+  await Promise.all(activeRaces.map(raceId => loadAndRenderRanking(raceId)));
+
+  // Charger les stats de la course active
   const raceLive = await fetchRaceLive(currentRace);
   renderStatsFromLive(raceLive);
 
-  await loadAndRenderRanking(currentRace);
+  // Rendre les onglets et les classements
+  renderRaceTabs('male');
+  renderRaceTabs('female');
+  renderRankingPanel('rank-scratch', 'count-scratch', rankingCache[activeRankingRace.male]?.male || [], TOP_N, 'male');
+  renderRankingPanel('rank-female', 'count-female', rankingCache[activeRankingRace.female]?.female || [], TOP_N, 'female');
 }
 
 function setStatus(msg, color) {
