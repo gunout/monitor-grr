@@ -195,9 +195,7 @@ html.dark .legend { background:rgba(15,20,25,.95); }
 .legend-row.hidden { opacity:.35; text-decoration:line-through; }
 .legend-line { display:inline-block; width:28px; height:4px; border-radius:2px; flex-shrink:0 }
 
-/* ═══════════════════════════════════════════════════════════
-   BOUSSOLE
-   ═══════════════════════════════════════════════════════════ */
+/* BOUSSOLE */
 .compass-container {
   position: absolute;
   top: 90px;
@@ -632,7 +630,7 @@ footer .devise-fr {
         <div class="legend-row" data-race="MTR"><span class="legend-line" style="background:#fc8230;"></span>Métis Trail (51 km)</div>
       </div>
 
-      <!-- 🧭 BOUSSOLE -->
+      <!-- BOUSSOLE -->
       <div class="compass-container" id="compassContainer">
         <div class="compass" id="compass" title="Glisser pour tourner · Double-clic pour reset">
           <span class="compass-label n" data-dir="N">N</span>
@@ -880,29 +878,16 @@ const RACES = {
   MTR: { name: 'Métis Trail',        code: 'MTR', dist: 51,  dplus: '2 500 m',  start: 'Saint-Paul',    startLon: 55.271,   startLat: -21.010,   color: '#fc8230', icon: '🌅', relays: false }
 };
 
-const CHECKPOINTS = {
-  GRR: [
-    { name: 'Saint-Pierre',          alt: 3,    dist: 0,   lat: -21.33975, lon: 55.45966 },
-    { name: 'Domaine Vidot',         alt: 652,  dist: 14,  lat: -21.31272, lon: 55.5459 },
-    { name: 'Notre Dame de la Paix', alt: 1684, dist: 33,  lat: -21.2458,  lon: 55.59408 },
-    { name: 'Nez de Boeuf',          alt: 2022, dist: 45,  lat: -21.20083, lon: 55.62105 },
-    { name: 'Mare à Boue',           alt: 1601, dist: 56,  lat: -21.16115, lon: 55.57097 },
-    { name: 'Croisée Kerveguen',     alt: 2480, dist: 68,  lat: -21.11119, lon: 55.4955 },
-    { name: 'Bélouve',               alt: 1498, dist: 76,  lat: -21.06061, lon: 55.53594 },
-    { name: 'Hell-Bourg',            alt: 0,    dist: 81,  lat: -21.0699,  lon: 55.52054 },
-    { name: 'Plaine des Merles',     alt: 1808, dist: 94,  lat: -21.06617, lon: 55.45108 },
-    { name: 'Sentier Scout',         alt: 1630, dist: 96,  lat: -21.05489, lon: 55.45453 },
-    { name: 'Grand Place',           alt: 666,  dist: 108, lat: -21.03872, lon: 55.4099 },
-    { name: 'Roche plate',           alt: 1164, dist: 115, lat: -21.06946, lon: 55.40662 },
-    { name: 'Maido tête dure',       alt: 1950, dist: 124, lat: -21.05112, lon: 55.38089 },
-    { name: 'Ilet Savannah',         alt: 127,  dist: 140, lat: -20.97243, lon: 55.32557 },
-    { name: 'Chemin Ratinaud',       alt: 441,  dist: 148, lat: -20.96243, lon: 55.35695 },
-    { name: 'La Possession',         alt: 0,    dist: 157, lat: -20.92736, lon: 55.33896 },
-    { name: 'Grande Chaloupe',       alt: 11,   dist: 164, lat: -20.89583, lon: 55.37733 },
-    { name: 'Le Colorado',           alt: 684,  dist: 173, lat: -20.90835, lon: 55.42361 },
-    { name: 'La Vigie',              alt: 346,  dist: 178, lat: -20.88499, lon: 55.44212 },
-    { name: 'Saint-Denis La Redoute', alt: 50,  dist: 180, lat: -20.88499, lon: 55.44212 }
-  ]
+/* ═══════════════════════════════════════════════════════════
+   POINTS DE TRACÉ (remplace CHECKPOINTS)
+   Chaque course a un tableau de { km, alt, lon, lat, terrain }
+   ═══════════════════════════════════════════════════════════ */
+let TRACK_POINTS = {
+  GRR: [],
+  MAS: [],
+  TDB: [],
+  ZEM: [],
+  MTR: []
 };
 
 let TRACKS = { GRR: null, MAS: null, TDB: null, ZEM: null, MTR: null };
@@ -919,6 +904,7 @@ let liveMarkers = {};
 let liveRunners = { male: [], female: [] };
 let trackingActive = false;
 let trackingTimer = null;
+let simulationMode = false;  // bascule simulation si API indisponible
 
 /* ═══════════════════════════════════════════════════════════
    CESIUM
@@ -939,7 +925,6 @@ async function initCesium() {
   viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#4a90c2');
   viewer.scene.fog.enabled = false;
 
-  // Contrôles de navigation Cesium
   viewer.scene.screenSpaceCameraController.enableTilt = true;
   viewer.scene.screenSpaceCameraController.enableRotate = true;
   viewer.scene.screenSpaceCameraController.enableLook = true;
@@ -1010,7 +995,6 @@ function setupCompass() {
     needle.style.transform = `rotate(${-normalized}deg)`;
     angleLabel.textContent = Math.round(normalized) + '°';
 
-    // Met aussi à jour le panneau intelligence
     const pitch = Cesium.Math.toDegrees(viewer.camera.pitch);
     const altitude = viewer.camera.positionCartographic.height;
     document.getElementById('ivHeading').textContent = Math.round(normalized) + '°';
@@ -1023,7 +1007,6 @@ function setupCompass() {
   viewer.camera.percentageChanged = 0.005;
   updateCompass();
 
-  // Clic-glisser
   compass.addEventListener('mousedown', (e) => {
     e.preventDefault();
     isDragging = true;
@@ -1053,7 +1036,6 @@ function setupCompass() {
     }
   });
 
-  // Touch (mobile)
   compass.addEventListener('touchstart', (e) => {
     e.preventDefault();
     isDragging = true;
@@ -1075,7 +1057,6 @@ function setupCompass() {
     isDragging = false;
   });
 
-  // Clic sur les lettres cardinales
   compass.querySelectorAll('.compass-label').forEach(label => {
     label.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1094,7 +1075,6 @@ function setupCompass() {
     });
   });
 
-  // Double-clic = reset
   compass.addEventListener('dblclick', (e) => {
     e.preventDefault();
     resetView();
@@ -1117,7 +1097,6 @@ function setupCompass() {
   console.log('🧭 Boussole activée — glisser pour tourner · double-clic pour reset');
 }
 
-/* Rotation clavier (flèches gauche/droite) */
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   if (!viewer) return;
@@ -1136,7 +1115,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ═══════════════════════════════════════════════════════════
-   TRACÉS
+   TRACÉS + POINTS
    ═══════════════════════════════════════════════════════════ */
 async function loadTrackUrls() {
   setStatus('🔍 Récupération des URLs de tracés…');
@@ -1169,21 +1148,38 @@ async function loadTrack(raceId) {
     const raw = await r.json();
 
     let coordinates = [];
+    const points = [];
+
     if (Array.isArray(raw.segments)) {
       raw.segments.forEach(seg => {
         if (!Array.isArray(seg.segment)) return;
         seg.segment.forEach(pt => {
           if (Array.isArray(pt) && Array.isArray(pt[2]) && pt[2].length >= 2) {
-            const lon = pt[2][0], lat = pt[2][1];
+            const distM = pt[0];
+            const altM = pt[1];
+            const lon = pt[2][0];
+            const lat = pt[2][1];
+            const terrain = pt[5] || 'R';
+
             if (typeof lon === 'number' && typeof lat === 'number' &&
                 lon > -180 && lon < 180 && lat > -90 && lat < 90) {
               coordinates.push([lon, lat]);
+              points.push({
+                km: distM / 1000,
+                alt: altM,
+                lon, lat,
+                terrain
+              });
             }
           }
         });
       });
     }
     if (!coordinates.length) throw new Error('Aucune coordonnée');
+
+    // ✅ Stocker les points pour le suivi live
+    TRACK_POINTS[raceId] = points;
+    console.log(`📍 ${raceId} : ${points.length} points indexés (${(points[points.length-1]?.km || 0).toFixed(1)} km)`);
 
     const geojson = {
       type: 'Feature',
@@ -1259,6 +1255,38 @@ function viewAll() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   RECHERCHE DE POSITION SUR LE TRACÉ
+   ═══════════════════════════════════════════════════════════ */
+function getPositionFromTrack(raceId, km) {
+  const pts = TRACK_POINTS[raceId];
+  if (!pts || !pts.length) return null;
+
+  // Recherche dichotomique
+  let lo = 0, hi = pts.length - 1;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (pts[mid].km < km) lo = mid + 1;
+    else hi = mid;
+  }
+
+  // Interpolation linéaire entre pts[lo-1] et pts[lo]
+  const p2 = pts[lo];
+  const p1 = pts[Math.max(0, lo - 1)];
+  if (!p1 || !p2) return p2;
+
+  const range = p2.km - p1.km;
+  const ratio = range > 0 ? (km - p1.km) / range : 0;
+
+  return {
+    km,
+    alt: p1.alt + (p2.alt - p1.alt) * ratio,
+    lon: p1.lon + (p2.lon - p1.lon) * ratio,
+    lat: p1.lat + (p2.lat - p1.lat) * ratio,
+    terrain: p2.terrain
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════
    LIVE DATA
    ═══════════════════════════════════════════════════════════ */
 async function fetchLive() {
@@ -1290,60 +1318,119 @@ async function fetchTopRunners(raceId, sex = 'MALE', limit = TOP_N) {
 
 /* ═══════════════════════════════════════════════════════════
    SUIVI EN DIRECT
+   Essaie plusieurs endpoints /lives, puis fallback simulation
    ═══════════════════════════════════════════════════════════ */
-async function fetchRunnerPosition(bib) {
-  try {
-    const r = await fetch(`https://api.v3.livetrail.net/api/events/runners/${bib}/detail`, {
-      headers: { 'X-Tenant': TENANT }
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
+const LIVE_ENDPOINTS = [
+  (bib) => `https://api.v3.livetrail.net/api/events/runners/${bib}/lives`,
+  (bib) => `https://api.v3.livetrail.net/api/events/runners/${bib}/live`,
+  (bib) => `https://api.v3.livetrail.net/api/events/runners/${bib}/passings`,
+  (bib) => `https://api.v3.livetrail.net/api/events/runners/${bib}`
+];
 
-    const passings = d.passings || [];
-    if (!passings.length) return null;
+async function tryFetchRunnerPosition(bib) {
+  for (const build of LIVE_ENDPOINTS) {
+    try {
+      const r = await fetch(build(bib), { headers: { 'X-Tenant': TENANT } });
+      if (!r.ok) continue;
+      const d = await r.json();
 
-    const sorted = [...passings].sort((a, b) => (b.pointId || 0) - (a.pointId || 0));
-    const last = sorted[0];
+      // Normaliser les passages selon la structure
+      let passings = d.passings || d.lives || d.points || [];
+      if (!passings.length && Array.isArray(d)) passings = d;
+      if (!passings.length) continue;
 
-    const cps = CHECKPOINTS[currentRace] || [];
-    let cp = cps.find(c => c.dist === last.km) || cps.find(c => c.name === last.name);
-    if (!cp && last.km != null) {
-      cp = cps.reduce((best, c) =>
-        Math.abs(c.dist - last.km) < Math.abs(best.dist - last.km) ? c : best
-      , cps[0]);
+      // Trier par km décroissant (dernier passage)
+      const sorted = [...passings].sort((a, b) => {
+        const ak = a.km ?? a.distance ?? a.pointId ?? 0;
+        const bk = b.km ?? b.distance ?? b.pointId ?? 0;
+        return bk - ak;
+      });
+      const last = sorted[0];
+
+      const km = last.km ?? last.distance;
+      if (km == null) continue;
+
+      const pos = getPositionFromTrack(currentRace, km);
+      if (!pos) continue;
+
+      return {
+        bib,
+        km,
+        name: last.name || last.pointName || `km ${km}`,
+        time: last.time || last.passingTime,
+        rank: last.rank || 0,
+        lat: pos.lat,
+        lon: pos.lon,
+        alt: pos.alt,
+        terrain: pos.terrain,
+        status: d.status
+      };
+    } catch (e) {
+      // continue vers le prochain endpoint
     }
-    if (!cp) return null;
-
-    return {
-      bib,
-      km: last.km ?? cp.dist,
-      name: last.name || cp.name,
-      time: last.time,
-      rank: last.rank || 0,
-      speed: last.speed || 0,
-      lat: cp.lat,
-      lon: cp.lon,
-      alt: cp.alt || 0,
-      status: d.status
-    };
-  } catch (e) {
-    return null;
   }
+  return null;
+}
+
+/* Simulation : positionne les coureurs à des km aléatoires cohérents */
+function simulateRunnerPosition(runner, idx) {
+  const pts = TRACK_POINTS[currentRace];
+  if (!pts || !pts.length) return null;
+
+  const totalKm = pts[pts.length - 1].km;
+  // Répartit les coureurs entre 5% et 95% du parcours
+  const km = totalKm * (0.05 + (idx / TOP_N) * 0.9);
+
+  const pos = getPositionFromTrack(currentRace, km);
+  if (!pos) return null;
+
+  return {
+    bib: runner.bib,
+    km: Math.round(km * 10) / 10,
+    name: `km ${km.toFixed(1)}`,
+    time: Date.now() - Math.random() * 3600 * 1000,
+    rank: idx + 1,
+    lat: pos.lat,
+    lon: pos.lon,
+    alt: pos.alt,
+    terrain: pos.terrain,
+    simulated: true
+  };
 }
 
 async function updateLiveMarkers() {
   if (!trackingActive) return;
 
   const race = liveData.find(r => r.raceId === currentRace);
-  if (!race || race.status !== 'RACE_IN_PROGRESS') {
-    setStatus('⏸️ Course pas encore lancée — suivi en attente', '#e88b00');
+  const raceInProgress = race && race.status === 'RACE_IN_PROGRESS';
+
+  const allRunners = [...liveRunners.male, ...liveRunners.female];
+  if (!allRunners.length) {
+    setStatus('⏸️ Aucun coureur à suivre — chargez les tracés d\'abord', '#e88b00');
     return;
   }
 
-  const allRunners = [...liveRunners.male, ...liveRunners.female];
-  const positions = await Promise.all(
-    allRunners.map(r => fetchRunnerPosition(r.bib))
-  );
+  let positions = [];
+
+  if (raceInProgress && !simulationMode) {
+    // Mode réel : on essaie l'API
+    positions = (await Promise.all(
+      allRunners.map(r => tryFetchRunnerPosition(r.bib))
+    )).filter(Boolean);
+
+    if (!positions.length) {
+      console.warn('⚠️ Aucune position API — bascule en mode simulation');
+      simulationMode = true;
+    }
+  }
+
+  if (!positions.length) {
+    // Mode simulation : on place les coureurs sur le tracé
+    simulationMode = true;
+    positions = allRunners
+      .map((r, i) => simulateRunnerPosition(r, i))
+      .filter(Boolean);
+  }
 
   let updated = 0;
   positions.forEach(pos => {
@@ -1406,11 +1493,14 @@ async function updateLiveMarkers() {
   document.getElementById('ivLastUpdate').textContent = time;
   document.getElementById('lcUpdate').textContent = time;
 
-  setStatus(`🟢 ${updated} coureurs suivis — MAJ ${time}`, '#00a854');
+  const mode = simulationMode ? '⚠️ SIMULATION' : '🟢 API';
+  setStatus(`${mode} · ${updated} coureurs suivis — MAJ ${time}`,
+            simulationMode ? '#e88b00' : '#00a854');
 }
 
 function buildPopupHTML(runner, pos, isFemale) {
   const color = isFemale ? '#EF4135' : '#0055A4';
+  const simBadge = pos.simulated ? '<div style="color:#e88b00;font-size:10px;margin-top:4px">⚠️ Position simulée</div>' : '';
   return `
     <div style="font-family:Inter,sans-serif;padding:10px;min-width:200px">
       <div style="font-weight:800;font-size:14px;color:${color};margin-bottom:6px">
@@ -1419,9 +1509,10 @@ function buildPopupHTML(runner, pos, isFemale) {
       <div style="font-size:11px;color:#666;line-height:1.6">
         <div>🏷️ Dossard <strong>#${pos.bib}</strong></div>
         <div>🌍 ${runner.countryCode || '—'}</div>
-        <div>📍 ${pos.km} km · ${pos.name}</div>
+        <div>📍 ${pos.km} km · ${pos.alt ? Math.round(pos.alt) + ' m' : '—'}</div>
         <div>🏆 Classement <strong>#${pos.rank}</strong></div>
         <div>⏱️ ${pos.time ? new Date(pos.time).toLocaleTimeString('fr-FR') : '—'}</div>
+        ${simBadge}
       </div>
     </div>
   `;
@@ -1440,6 +1531,18 @@ function updateLiveCounter() {
 async function startLiveTracking() {
   if (trackingActive) return;
 
+  // Vérifier qu'on a bien les points de tracé
+  if (!TRACK_POINTS[currentRace] || !TRACK_POINTS[currentRace].length) {
+    setStatus('⏳ Chargement des tracés requis pour le suivi…', '#e88b00');
+    await loadAllTracks();
+  }
+
+  // Zembrocal : pas de suivi individuel
+  if (RACES[currentRace]?.relays) {
+    setStatus('🔁 Zembrocal en relais — suivi individuel indisponible', '#e88b00');
+    return;
+  }
+
   setStatus('📥 Chargement des 20 premiers H/F…');
   const [males, females] = await Promise.all([
     fetchTopRunners(currentRace, 'MALE', TOP_N),
@@ -1450,7 +1553,13 @@ async function startLiveTracking() {
 
   console.log(`🎯 Suivi: ${males.length} H + ${females.length} F`);
 
+  if (!males.length && !females.length) {
+    setStatus('❌ Aucun coureur récupéré — vérifier API', 'var(--fr-red)');
+    return;
+  }
+
   trackingActive = true;
+  simulationMode = false;
   document.getElementById('liveCounter').classList.add('visible');
   document.getElementById('ivTrackingStatus').textContent = 'Actif';
   document.getElementById('ivTrackingStatus').style.color = 'var(--green)';
@@ -1465,6 +1574,7 @@ async function startLiveTracking() {
 
 function stopLiveTracking() {
   trackingActive = false;
+  simulationMode = false;
   if (trackingTimer) clearInterval(trackingTimer);
   trackingTimer = null;
 
@@ -1675,8 +1785,13 @@ document.getElementById('trackBtn').addEventListener('click', async function() {
     this.innerHTML = '⏳ <span class="lbl">Activation…</span>';
     await startLiveTracking();
     this.disabled = false;
-    this.innerHTML = '⏹️ <span class="lbl">Arrêter suivi</span>';
-    this.classList.add('active');
+    if (trackingActive) {
+      this.innerHTML = '⏹️ <span class="lbl">Arrêter suivi</span>';
+      this.classList.add('active');
+    } else {
+      this.innerHTML = '🟢 <span class="lbl">Suivi live</span>';
+      this.classList.remove('active');
+    }
   }
 });
 
