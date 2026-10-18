@@ -1,0 +1,2194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>🇫🇷 Grand Raid 2026 — Monitor Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.145/Build/Cesium/Cesium.js"></script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.145/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-0:#f5f7fa;--bg-1:#ffffff;--bg-2:#f0f2f6;--bg-3:#e4e8ef;
+  --border:#d1d9e6;--border-hi:#a8b4c8;
+  --text-0:#0a1628;--text-1:#4a5a75;--text-2:#8896b0;
+  --fr-blue:#0055A4;--fr-blue-light:#1E7FE0;--fr-red:#EF4135;--fr-white:#ffffff;
+  --green:#00a854;--amber:#e88b00;
+  --shadow:0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:0 4px 12px rgba(0,0,0,0.10);
+  --shadow-lg:0 10px 30px rgba(0,0,0,0.15);
+  --font-mono:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+}
+html.dark{
+  --bg-0:#050810;--bg-1:#0a0f1a;--bg-2:#0f1624;--bg-3:#151f30;
+  --border:#1c2940;--border-hi:#2a3a55;
+  --text-0:#e6f1ff;--text-1:#8ba3c7;--text-2:#4a5f7f;
+  --fr-blue:#1E7FE0;--fr-blue-light:#3B82F6;
+  --green:#00ff88;--amber:#ffb800;
+  --shadow:0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg:0 10px 30px rgba(0,0,0,0.7);
+}
+html{height:100%}
+body{font-family:var(--font-sans);background:var(--bg-0);color:var(--text-0);
+  font-size:12px;line-height:1.4;min-height:100%;overflow-x:hidden;
+  transition:background 0.3s,color 0.3s}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg-2)}
+::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--fr-blue-light)}
+
+.topbar{
+  min-height:50px;background:var(--bg-1);
+  display:flex;align-items:center;
+  padding:6px 12px;gap:10px;position:sticky;top:0;z-index:100;flex-wrap:wrap;
+  position:relative;box-shadow:var(--shadow);
+}
+.topbar::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:linear-gradient(to right,
+    var(--fr-blue) 0 33.33%,var(--fr-white) 33.33% 66.66%,var(--fr-red) 66.66% 100%);
+}
+.brand{font-family:var(--font-mono);font-size:12px;font-weight:700;
+  color:var(--text-0);letter-spacing:1px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.brand .flag{display:inline-flex;width:22px;height:14px;border-radius:2px;overflow:hidden;flex-shrink:0;
+  box-shadow:0 0 0 1px var(--border)}
+.brand .flag span{flex:1}
+.brand .flag .b{background:var(--fr-blue)}
+.brand .flag .w{background:#fff}
+.brand .flag .r{background:var(--fr-red)}
+.brand .sub{color:var(--text-2);font-weight:400;font-size:11px;display:none}
+
+.topbar-right{margin-left:auto;display:flex;gap:10px;font-family:var(--font-mono);
+  font-size:10px;align-items:center;flex-wrap:wrap;order:2}
+.topbar-stat{display:flex;gap:4px;color:var(--text-1);align-items:center;white-space:nowrap}
+.topbar-stat .val{color:var(--fr-blue);font-weight:700}
+.topbar-stat .val.green{color:var(--green)}
+.topbar-stat .val.amber{color:var(--amber)}
+
+#themeToggle{
+  background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);
+  padding:6px 12px;border-radius:6px;font-family:var(--font-mono);font-size:11px;
+  font-weight:600;cursor:pointer;transition:all 0.2s;margin-left:8px;white-space:nowrap;
+}
+#themeToggle:hover{background:var(--bg-3);border-color:var(--fr-blue-light);color:var(--fr-blue)}
+
+.app{
+  display:grid;grid-template-columns:240px 1fr 280px;
+  height:calc(100vh - 53px);overflow:hidden;
+  transition:grid-template-columns 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+@media(min-width:1600px){.app{grid-template-columns:280px 1fr 340px}}
+@media(max-width:1200px){.app{grid-template-columns:220px 1fr 260px}}
+.app.focus-map{grid-template-columns:0 1fr 0}
+.app.focus-map .sidebar,.app.focus-map .right{opacity:0;pointer-events:none;overflow:hidden}
+.app.hide-left{grid-template-columns:0 1fr 280px}
+.app.hide-left .sidebar{opacity:0;pointer-events:none;overflow:hidden}
+.app.hide-right{grid-template-columns:240px 1fr 0}
+.app.hide-right .right{opacity:0;pointer-events:none;overflow:hidden}
+.app.hide-rankings .stats-grid,.app.hide-rankings .rank-grid{display:none}
+
+.sidebar{background:var(--bg-1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;min-height:0;transition:opacity 0.3s}
+.sb-head{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg-2);flex-shrink:0}
+.sb-title{font-family:var(--font-mono);font-size:10px;font-weight:700;
+  color:var(--fr-blue);letter-spacing:1.2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.sb-title::before{content:'';width:3px;height:12px;
+  background:linear-gradient(180deg,var(--fr-blue) 0 33%,var(--text-0) 33% 66%,var(--fr-red) 66% 100%);}
+.sb-count{font-family:var(--font-mono);font-size:10px;color:var(--text-2);margin-top:5px}
+
+.sb-list{flex:1;overflow-y:auto;padding:6px;min-height:0;-webkit-overflow-scrolling:touch}
+.sb-item{background:var(--bg-2);border:1px solid var(--border);border-left:3px solid var(--fr-blue);
+  border-radius:5px;padding:8px 10px;margin-bottom:4px;cursor:pointer;
+  transition:all 0.15s;position:relative}
+.sb-item:hover{border-color:var(--fr-blue-light);border-left-color:var(--fr-blue-light);
+  background:var(--bg-1);transform:translateX(2px);box-shadow:var(--shadow)}
+.sb-item.active{border-color:var(--fr-blue);border-left-color:var(--fr-blue);background:var(--bg-1);
+  box-shadow:var(--shadow-md)}
+.sb-item.active::after{content:'';position:absolute;right:8px;top:50%;
+  transform:translateY(-50%);width:5px;height:5px;border-radius:50%;
+  background:var(--fr-blue);box-shadow:0 0 8px var(--fr-blue)}
+.sb-item-h{display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.sb-item-icon{font-size:14px;flex-shrink:0}
+.sb-item-name{font-family:var(--font-mono);font-size:10px;font-weight:700;
+  color:var(--text-0);flex:1;line-height:1.25;word-break:break-word}
+.sb-item-meta{display:flex;gap:6px;font-family:var(--font-mono);font-size:8px;
+  color:var(--text-2);margin-top:2px}
+.sb-item-meta .live{color:var(--green);font-weight:700}
+.sb-item input[type="checkbox"]{
+  appearance:none;width:14px;height:14px;border:2px solid var(--border-hi);
+  border-radius:3px;cursor:pointer;position:relative;flex-shrink:0;
+  transition:all 0.15s;background:var(--bg-1);
+}
+.sb-item input[type="checkbox"]:checked{
+  background:var(--fr-blue);border-color:var(--fr-blue);
+}
+.sb-item input[type="checkbox"]:checked::after{
+  content:'✓';position:absolute;top:-2px;left:1px;
+  color:#fff;font-size:11px;font-weight:900;
+}
+
+.center{background:var(--bg-0);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+.work-bar{padding:10px 14px;background:var(--bg-1);border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+  box-shadow:var(--shadow)}
+.work-bar-info{flex:1;min-width:140px}
+.work-bar-title{font-family:var(--font-mono);font-size:13px;font-weight:700;
+  color:var(--text-0);display:flex;align-items:center;gap:7px;line-height:1.3}
+.work-bar-title .ic{font-size:17px;filter:drop-shadow(0 0 6px currentColor)}
+.work-bar-url{font-family:var(--font-mono);font-size:8.5px;color:var(--text-2);margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.work-bar-actions{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.wb-btn{font-family:var(--font-mono);font-size:9.5px;font-weight:700;
+  padding:6px 10px;border-radius:4px;text-decoration:none;letter-spacing:0.3px;
+  transition:all 0.15s;cursor:pointer;border:1px solid transparent;
+  display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.wb-btn.blue{background:var(--fr-blue);color:#fff;border-color:var(--fr-blue)}
+.wb-btn.blue:hover{background:var(--fr-blue-light);border-color:var(--fr-blue-light);
+  transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.wb-btn.green{background:var(--green);color:#fff;border-color:var(--green)}
+.wb-btn.green:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.wb-btn.green.active{background:var(--fr-red);border-color:var(--fr-red)}
+.wb-btn.white{background:var(--bg-1);color:var(--fr-blue);border-color:var(--fr-blue)}
+.wb-btn.white:hover{background:var(--fr-blue);color:#fff}
+.wb-btn.red{background:var(--fr-red);color:#fff;border-color:var(--fr-red)}
+.wb-btn.red:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.wb-btn.gray{background:var(--bg-2);color:var(--text-1);border-color:var(--border);
+  padding:6px 9px;font-size:11px}
+.wb-btn.gray:hover{background:var(--bg-3);color:var(--fr-blue);border-color:var(--fr-blue);
+  transform:translateY(-1px)}
+.wb-btn.gray.active{background:var(--fr-blue);color:#fff;border-color:var(--fr-blue)}
+.wb-sep{width:1px;height:20px;background:var(--border);margin:0 3px}
+
+#cesiumContainer{flex:1;position:relative;overflow:hidden;background:var(--bg-0);min-height:0}
+
+.legend {
+  position:absolute; bottom:16px; left:16px; z-index:999;
+  background:rgba(255,255,255,.96); backdrop-filter:blur(12px);
+  border:1px solid var(--border); border-radius:8px;
+  padding:14px 18px; font-size:.78rem;
+  display:block; min-width:230px;
+  box-shadow:var(--shadow-lg); font-family:var(--font-mono);
+  transition:all 0.3s;
+}
+html.dark .legend { background:rgba(15,20,25,.95); }
+.legend.collapsed { padding:8px 12px; min-width:auto; }
+.legend.collapsed .legend-row { display:none; }
+.legend.collapsed .legend-title { margin-bottom:0; cursor:pointer; }
+.legend .legend-title {
+  color:var(--fr-blue); font-weight:800;
+  font-size:.7rem; text-transform:uppercase;
+  letter-spacing:1.5px; margin-bottom:12px;
+  display:flex; align-items:center; gap:6px;
+}
+.legend .legend-toggle {
+  cursor:pointer;background:transparent;border:none;color:var(--fr-blue);
+  font-size:11px;padding:0 4px;margin-left:auto;transition:transform 0.2s;
+}
+.legend.collapsed .legend-toggle { transform:rotate(180deg); }
+.legend-row {
+  display:flex; align-items:center; gap:10px;
+  margin:6px 0; color:var(--text-1);
+  font-weight:600; cursor:pointer;
+  padding:4px 6px; border-radius:6px; transition:background .2s;
+}
+.legend-row:hover { background:var(--bg-2); }
+.legend-row.hidden { opacity:.35; text-decoration:line-through; }
+.legend-line { display:inline-block; width:28px; height:4px; border-radius:2px; flex-shrink:0 }
+
+.compass-container {
+  position: absolute; top: 90px; right: 20px; z-index: 999;
+  width: 80px; display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+.compass {
+  width: 70px; height: 70px; border-radius: 50%;
+  background: rgba(255,255,255,.96); backdrop-filter: blur(12px);
+  border: 2px solid var(--border); box-shadow: var(--shadow-lg);
+  cursor: grab; position: relative; transition: box-shadow 0.2s; user-select: none;
+}
+html.dark .compass { background: rgba(15,20,25,.95); }
+.compass:active { cursor: grabbing; box-shadow: 0 0 0 3px rgba(0,85,164,.3); }
+.compass::before { content: ''; position: absolute; inset: 6px; border-radius: 50%; border: 1px dashed var(--border); }
+.compass-needle {
+  position: absolute; top: 50%; left: 50%; width: 4px; height: 30px;
+  margin-left: -2px; margin-top: -30px;
+  transform-origin: 50% 100%; transition: transform 0.15s ease-out;
+}
+.compass-needle::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+  background: var(--fr-red); border-radius: 2px 2px 0 0;
+}
+.compass-needle::after {
+  content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 50%;
+  background: var(--fr-blue); border-radius: 0 0 2px 2px;
+}
+.compass-label {
+  position: absolute; font-family: var(--font-mono); font-size: 9px; font-weight: 800;
+  color: var(--text-0); cursor: pointer; padding: 2px; transition: color 0.2s;
+}
+.compass-label:hover { color: var(--fr-blue); }
+.compass-label.n { top: 4px; left: 50%; transform: translateX(-50%); color: var(--fr-red); }
+.compass-label.s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.compass-label.e { right: 5px; top: 50%; transform: translateY(-50%); }
+.compass-label.w { left: 5px; top: 50%; transform: translateY(-50%); }
+.compass-reset {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,.96); backdrop-filter: blur(12px);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px; color: var(--text-1); transition: all 0.2s;
+}
+html.dark .compass-reset { background: rgba(15,20,25,.95); }
+.compass-reset:hover { background: var(--fr-blue); color: #fff; border-color: var(--fr-blue); transform: rotate(-90deg); }
+.compass-angle {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--text-1); background: rgba(255,255,255,.96);
+  padding: 3px 10px; border-radius: 10px; border: 1px solid var(--border); white-space: nowrap;
+}
+html.dark .compass-angle { background: rgba(15,20,25,.95); }
+
+.live-counter {
+  position:absolute; top:16px; right:16px; z-index:999;
+  background:rgba(255,255,255,.96); backdrop-filter:blur(12px);
+  border:1px solid var(--border); border-radius:8px;
+  padding:10px 14px; font-family:var(--font-mono); font-size:.72rem;
+  box-shadow:var(--shadow-lg); display:none;
+}
+html.dark .live-counter { background:rgba(15,20,25,.95); }
+.live-counter.visible { display:block; }
+.live-counter .lc-title {
+  color:var(--fr-blue); font-weight:800; font-size:.65rem;
+  text-transform:uppercase; letter-spacing:1.2px; margin-bottom:6px;
+}
+.live-counter .lc-row { display:flex; gap:10px; margin:3px 0; align-items:center; }
+.live-counter .lc-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.live-counter .lc-dot.male { background:var(--fr-blue); }
+.live-counter .lc-dot.female { background:var(--fr-red); }
+.live-counter .lc-count { font-weight:700; color:var(--text-0); }
+.live-counter .lc-label { color:var(--text-2); }
+.live-counter .lc-race { 
+  display:flex; gap:6px; margin:2px 0; align-items:center; 
+  font-size:.65rem; padding-left:8px; color:var(--text-1);
+}
+
+.stats-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:10px; padding:10px 14px;
+  background:var(--bg-1); border-bottom:1px solid var(--border);
+  transition:all 0.3s;
+}
+.stat-card {
+  background:var(--bg-1); border:1px solid var(--border);
+  border-radius:10px; padding:14px;
+  transition:all .25s; position:relative; overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.stat-card::before {
+  content:''; position:absolute; top:0; left:0; width:100%; height:3px;
+  background:linear-gradient(90deg,var(--fr-blue),var(--fr-white),var(--fr-red));
+  transform:scaleX(0); transform-origin:left; transition:transform .3s;
+}
+.stat-card:hover { transform:translateY(-2px); border-color:var(--fr-blue-light); box-shadow:var(--shadow-md); }
+.stat-card:hover::before { transform:scaleX(1); }
+.stat-icon { font-size:1.3rem; margin-bottom:6px; display:block; }
+.stat-label {
+  font-size:9px; text-transform:uppercase; letter-spacing:1.3px; color:var(--text-2);
+  font-weight:700; margin-bottom:6px; font-family:var(--font-mono);
+}
+.stat-value {
+  font-family:var(--font-mono); font-size:1.5rem; font-weight:800;
+  color:var(--text-0); line-height:1;
+}
+.stat-value.green { color:var(--green); }
+.stat-value.amber { color:var(--amber); }
+.stat-value.red { color:var(--fr-red); }
+.stat-value.blue { color:var(--fr-blue); }
+
+.rank-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:12px; padding:10px 14px;
+  background:var(--bg-1); border-top:1px solid var(--border);
+  flex-shrink:0; transition:all 0.3s;
+}
+@media (max-width:900px) { .rank-grid { grid-template-columns:1fr; } }
+.rank-panel {
+  background:var(--bg-1); border:1px solid var(--border);
+  border-radius:10px; padding:14px;
+  display:flex; flex-direction:column; box-shadow:var(--shadow);
+}
+.rank-panel-header {
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:12px; padding-bottom:10px;
+  border-bottom:1px solid var(--border);
+}
+.rank-panel-header .icon {
+  width:32px; height:32px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center; font-size:1rem;
+}
+.rank-panel.scratch .icon { background:rgba(0,85,164,.15); color:var(--fr-blue); }
+.rank-panel.female .icon { background:rgba(239,65,53,.15); color:var(--fr-red); }
+.rank-panel-header h3 {
+  font-size:.8rem; font-weight:800;
+  text-transform:uppercase; letter-spacing:1px;
+  color:var(--text-0); font-family:var(--font-mono);
+}
+.rank-panel-header .count {
+  margin-left:auto; font-size:.7rem; color:var(--text-2);
+  font-weight:600; font-family:var(--font-mono);
+}
+.rank-list {
+  display:flex; flex-direction:column; gap:5px;
+  max-height:360px; overflow-y:auto; padding-right:4px;
+}
+.rank-list::-webkit-scrollbar { width:5px; }
+.rank-list::-webkit-scrollbar-track { background:var(--bg-2); border-radius:3px; }
+.rank-list::-webkit-scrollbar-thumb { background:var(--border-hi); border-radius:3px; }
+.rank-list::-webkit-scrollbar-thumb:hover { background:var(--fr-blue-light); }
+
+.rank-item {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px; background:var(--bg-2); border-radius:8px;
+  border-left:3px solid var(--border); transition:all .15s; flex-shrink:0;
+}
+.rank-item:hover { background:var(--bg-3); transform:translateX(3px); }
+.rank-item.p1 { border-left-color:var(--amber); background:rgba(232,139,0,.08); }
+.rank-item.p2 { border-left-color:var(--fr-blue-light); background:rgba(30,127,224,.08); }
+.rank-item.p3 { border-left-color:var(--fr-red); background:rgba(239,65,53,.08); }
+.rank-item.tracked { border-left-color:var(--green); box-shadow:inset 3px 0 0 var(--green); }
+.rank-item .medal {
+  width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:.68rem;
+  background:var(--bg-3); color:var(--text-1);
+  flex-shrink:0; font-family:var(--font-mono);
+}
+.rank-item.p1 .medal { background:linear-gradient(135deg,var(--amber),#e89d1f); color:#fff; }
+.rank-item.p2 .medal { background:linear-gradient(135deg,var(--fr-blue-light),var(--fr-blue)); color:#fff; }
+.rank-item.p3 .medal { background:linear-gradient(135deg,var(--fr-red),#b32d24); color:#fff; }
+.rank-item .name {
+  flex:1; font-weight:700; font-size:.8rem;
+  color:var(--text-0); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.rank-item .bib {
+  font-family:var(--font-mono); font-size:.68rem; color:var(--text-2);
+  font-weight:600; flex-shrink:0;
+}
+.rank-item .flag {
+  font-size:.72rem; font-weight:700; color:var(--text-2); flex-shrink:0;
+}
+.rank-item .pos-live {
+  font-family:var(--font-mono); font-size:.65rem; color:var(--green);
+  font-weight:700; flex-shrink:0;
+}
+.rank-item .diff {
+  font-family:var(--font-mono); font-size:.62rem; color:var(--text-2);
+  flex-shrink:0;
+}
+.rank-item .race-badge {
+  font-family:var(--font-mono); font-size:.58rem; font-weight:700;
+  padding:1px 4px; border-radius:3px; flex-shrink:0;
+}
+
+.race-tabs {
+  display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap;
+}
+.race-tab {
+  font-family:var(--font-mono); font-size:.68rem; font-weight:700;
+  padding:4px 8px; border-radius:4px; cursor:pointer;
+  border:1px solid var(--border); background:var(--bg-2);
+  color:var(--text-1); transition:all 0.15s;
+}
+.race-tab:hover { background:var(--bg-3); border-color:var(--fr-blue-light); }
+.race-tab.active { color:#fff; }
+
+#status {
+  text-align:center; padding:12px;
+  background:var(--bg-1); border-top:1px solid var(--border);
+  color:var(--text-1); font-size:.75rem; font-weight:600;
+  letter-spacing:.5px; text-transform:uppercase;
+  font-family:var(--font-mono); flex-shrink:0;
+}
+
+.right{background:var(--bg-1);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;min-height:0;transition:opacity 0.3s}
+.rs-head{padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg-2);
+  font-family:var(--font-mono);font-size:9.5px;font-weight:700;color:var(--fr-blue);
+  letter-spacing:1.2px;text-transform:uppercase;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.rs-head::before{content:'';width:3px;height:12px;
+  background:linear-gradient(180deg,var(--fr-blue) 0 33%,var(--text-0) 33% 66%,var(--fr-red) 66% 100%);}
+.rs-body{flex:1;overflow-y:auto;padding:10px;min-height:0;-webkit-overflow-scrolling:touch}
+
+.intel-panel{background:var(--bg-1);border:1px solid var(--border);border-radius:5px;
+  margin-bottom:8px;overflow:hidden;box-shadow:var(--shadow)}
+.intel-head{padding:6px 10px;background:var(--bg-2);border-bottom:1px solid var(--border);
+  font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--fr-blue);
+  letter-spacing:0.8px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.intel-body{padding:8px}
+.intel-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;
+  border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:9px}
+.intel-row:last-child{border-bottom:none}
+.intel-row .k{color:var(--text-1)}
+.intel-row .v{color:var(--text-0);font-weight:700;text-align:right;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px}
+.intel-row .v.cyan{color:var(--fr-blue)}
+.intel-row .v.green{color:var(--green)}
+.intel-row .v.amber{color:var(--amber)}
+.intel-row .v.red{color:var(--fr-red)}
+
+.progress{height:3px;background:var(--bg-3);border-radius:2px;overflow:hidden;margin-top:3px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--fr-blue),var(--fr-blue-light));
+  border-radius:2px;transition:width 0.4s}
+
+.intel-toggle{display:none;width:100%;background:var(--bg-2);border:none;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  color:var(--fr-blue);font-family:var(--font-mono);font-size:11px;font-weight:700;
+  padding:12px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;
+  align-items:center;justify-content:center;gap:8px}
+.intel-toggle:hover{background:var(--bg-3)}
+
+#dnfList{max-height:280px;overflow-y:auto}
+#dnfList::-webkit-scrollbar{width:5px}
+#dnfList::-webkit-scrollbar-track{background:var(--bg-2);border-radius:3px}
+#dnfList::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
+#dnfList::-webkit-scrollbar-thumb:hover{background:var(--fr-red)}
+
+#dnfCount.pulse{animation:dnfPulse 2s ease-in-out infinite}
+@keyframes dnfPulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+footer {
+  text-align:center; padding:16px 20px;
+  color:var(--text-2); font-size:.72rem;
+  border-top:1px solid var(--border);
+  line-height:1.8; font-family:var(--font-mono);
+  background:var(--bg-1);
+}
+footer a { color:var(--fr-blue); text-decoration:none; font-weight:600; }
+footer a:hover { color:var(--fr-blue-light); }
+footer .devise-fr {
+  color:var(--fr-blue); font-weight:800;
+  letter-spacing:3px; text-transform:uppercase;
+  margin-bottom:6px; font-size:.72rem;
+  background:linear-gradient(90deg,var(--fr-blue) 0 33%,var(--text-0) 33% 66%,var(--fr-red) 66% 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+@media(max-width:900px){
+  body{overflow-y:auto;overflow-x:hidden}
+  .app{display:flex;flex-direction:column;height:auto;min-height:calc(100vh - 53px);
+    overflow:visible;transition:none}
+  .app.focus-map .sidebar,.app.focus-map .right,
+  .app.hide-left .sidebar,.app.hide-right .right{opacity:1;pointer-events:auto;overflow:visible;display:flex}
+  .sidebar{order:1;width:100%;max-height:none;border-right:none;border-bottom:1px solid var(--border)}
+  .sb-list{max-height:240px}
+  .center{order:2;width:100%}
+  #cesiumContainer{position:relative;width:100%;height:60vh;min-height:400px;max-height:75vh;flex:none}
+  .intel-toggle{display:flex}
+  .right{order:3;width:100%;max-height:none;border-left:none;border-top:none;display:none}
+  .right.open{display:flex}
+  .topbar-right{order:2;margin-left:auto}
+  .brand .sub{display:inline}
+  .rank-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .topbar{padding:8px 10px;gap:8px;position:relative}
+  .brand{font-size:12px;width:100%;justify-content:center}
+  .brand .sub{display:inline;font-size:10px}
+  .topbar-right{width:100%;justify-content:center;gap:12px;font-size:10px;
+    padding:4px 0;border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);margin:0;order:2}
+  .wb-btn{flex:1;justify-content:center;font-size:9.5px;padding:7px 6px;min-width:0}
+  .wb-btn.gray{flex:0 0 auto;padding:7px 12px}
+  #cesiumContainer{height:55vh;min-height:340px;max-height:70vh}
+  .legend{font-size:0.7rem;padding:10px 12px;min-width:180px}
+  .stat-value{font-size:1.2rem}
+  .rank-list{max-height:300px}
+  .compass-container { top: 70px; right: 10px; }
+  .compass { width: 56px; height: 56px; }
+  .compass-needle { height: 24px; margin-top: -24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="flag"><span class="b"></span><span class="w"></span><span class="r"></span></span>
+    GRAND RAID 2026
+    <span class="sub">/ live monitor</span>
+  </div>
+
+  <div class="topbar-right">
+    <div class="topbar-stat"><span>HEURE</span><span class="val green" id="tbTime">--:--:--</span></div>
+    <div class="topbar-stat"><span>SUIVIS</span><span class="val amber" id="tbTracked">0</span></div>
+    <div class="topbar-stat"><span>ABANDONS</span><span class="val red" id="tbDnf">0</span></div>
+    <div class="topbar-stat"><span>STATUT</span><span class="val" id="tbStatus">—</span></div>
+    <button id="themeToggle">🌙 Sombre</button>
+  </div>
+</div>
+
+<div class="app" id="appEl">
+
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-title">◆ LES 5 COURSES</div>
+      <div class="sb-count" id="sbCount">Cochez pour suivre en simultané</div>
+    </div>
+    <div class="sb-list" id="sbList">
+      <div class="loading" style="padding:20px;font-size:10px">⏳ Chargement des courses...</div>
+    </div>
+  </aside>
+
+  <main class="center">
+    <div class="work-bar">
+      <div class="work-bar-info">
+        <div class="work-bar-title">
+          <span class="ic" id="activeIcon">🇫🇷</span>
+          <span id="activeName">Chargement...</span>
+        </div>
+        <div class="work-bar-url" id="activeUrl">—</div>
+      </div>
+      <div class="work-bar-actions">
+        <button class="wb-btn green" id="trackBtn">🟢 <span class="lbl">Suivi live</span></button>
+        <button class="wb-btn blue" id="loadBtn">📥 <span class="lbl">Tracés</span></button>
+        <button class="wb-btn white" id="viewAllBtn">🗺️ <span class="lbl">Vue</span></button>
+        <button class="wb-btn red" id="toggleBtn">👁️ <span class="lbl">Masquer</span></button>
+
+        <span class="wb-sep"></span>
+
+        <button class="wb-btn gray" id="toggleLeft" title="Masquer les courses (L)">◀</button>
+        <button class="wb-btn gray" id="toggleFocus" title="Carte plein écran (F)">⛶</button>
+        <button class="wb-btn gray" id="toggleRight" title="Masquer l'intelligence (R)">▶</button>
+        <button class="wb-btn gray" id="toggleRankings" title="Masquer les classements">📋</button>
+      </div>
+    </div>
+
+    <div id="cesiumContainer">
+      <div class="legend" id="legend">
+        <div class="legend-title">
+          ◆ PARCOURS
+          <button class="legend-toggle" id="legendToggle" title="Replier la légende">▼</button>
+        </div>
+        <div class="legend-row" data-race="GRR"><span class="legend-line" style="background:#F9B233;"></span>Diagonale des Fous (180 km)</div>
+        <div class="legend-row" data-race="MAS"><span class="legend-line" style="background:#009E60;"></span>Mascareignes (74 km)</div>
+        <div class="legend-row" data-race="TDB"><span class="legend-line" style="background:#1B5DA8;"></span>Trail de Bourbon (106 km)</div>
+        <div class="legend-row" data-race="ZEM"><span class="legend-line" style="background:#E4032E;"></span>Zembrocal Trail (160 km)</div>
+        <div class="legend-row" data-race="MTR"><span class="legend-line" style="background:#fc8230;"></span>Métis Trail (51 km)</div>
+      </div>
+
+      <div class="compass-container" id="compassContainer">
+        <div class="compass" id="compass" title="Glisser pour tourner · Double-clic pour reset">
+          <span class="compass-label n" data-dir="N">N</span>
+          <span class="compass-label s" data-dir="S">S</span>
+          <span class="compass-label e" data-dir="E">E</span>
+          <span class="compass-label w" data-dir="O">O</span>
+          <div class="compass-needle" id="compassNeedle"></div>
+        </div>
+        <button class="compass-reset" id="compassReset" title="Recentrer au Nord">↻</button>
+        <div class="compass-angle" id="compassAngle">0°</div>
+      </div>
+
+      <div class="live-counter" id="liveCounter">
+        <div class="lc-title">◆ SUIVI EN DIRECT</div>
+        <div id="lcRaces"></div>
+        <div class="lc-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+          <span class="lc-label">MAJ</span>
+          <span class="lc-count" id="lcUpdate">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-icon">🏁</span>
+        <div class="stat-label">Statut course</div>
+        <div class="stat-value blue" id="stat-status">—</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">👥</span>
+        <div class="stat-label">Inscrits</div>
+        <div class="stat-value blue" id="stat-registered">—</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🏃</span>
+        <div class="stat-label">En course</div>
+        <div class="stat-value amber" id="stat-onrace">0</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🏆</span>
+        <div class="stat-label">Finishers</div>
+        <div class="stat-value green" id="stat-finisher">0</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">❌</span>
+        <div class="stat-label">Abandons</div>
+        <div class="stat-value red" id="stat-dnf">0</div>
+      </div>
+    </div>
+
+    <div class="rank-grid">
+      <div class="rank-panel scratch">
+        <div class="rank-panel-header">
+          <div class="icon">🏅</div>
+          <h3>Top 20 · Hommes</h3>
+          <span class="count" id="count-scratch">—</span>
+        </div>
+        <div class="race-tabs" id="tabs-scratch"></div>
+        <div class="rank-list" id="rank-scratch">Chargement…</div>
+      </div>
+      <div class="rank-panel female">
+        <div class="rank-panel-header">
+          <div class="icon">👩</div>
+          <h3>Top 20 · Femmes</h3>
+          <span class="count" id="count-female">—</span>
+        </div>
+        <div class="race-tabs" id="tabs-female"></div>
+        <div class="rank-list" id="rank-female">Chargement…</div>
+      </div>
+    </div>
+
+    <div id="status">Initialisation du globe 3D…</div>
+  </main>
+
+  <button class="intel-toggle" id="intelToggle">
+    ◆ INTELLIGENCE <span id="intelArrow">▼</span>
+  </button>
+
+  <aside class="right" id="rightPanel">
+    <div class="rs-head">◆ INTELLIGENCE</div>
+    <div class="rs-body">
+      <div class="intel-panel">
+        <div class="intel-head"><span>📊 COURSES SUIVIES</span></div>
+        <div class="intel-body" id="activeRacesInfo">
+          <div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>📈 STATISTIQUES</span></div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Inscrits</span><span class="v cyan" id="gsRegistered">—</span></div>
+          <div class="intel-row"><span class="k">En course</span><span class="v amber" id="gsOnRace">0</span></div>
+          <div class="intel-row"><span class="k">Finishers</span><span class="v green" id="gsFinisher">0</span></div>
+          <div class="intel-row"><span class="k">Abandons</span><span class="v red" id="gsDnf">0</span></div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head">
+          <span>🚫 ABANDONS</span>
+          <span id="dnfCount" style="color:var(--fr-red);font-weight:800">0</span>
+        </div>
+        <div class="intel-body" id="dnfList">
+          <div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">Aucun abandon détecté</div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>📍 DISTRIBUTION</span></div>
+        <div class="intel-body" id="distributionList">
+          <div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>🟢 SUIVI EN DIRECT</span></div>
+        <div class="intel-body" id="liveTrackingInfo">
+          <div class="intel-row"><span class="k">Dernière MAJ</span><span class="v green" id="ivLastUpdate">—</span></div>
+          <div class="intel-row"><span class="k">Rafraîchissement</span><span class="v amber">30 s</span></div>
+          <div class="intel-row"><span class="k">Statut</span><span class="v" id="ivTrackingStatus">Inactif</span></div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>🧭 ORIENTATION</span></div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Cap caméra</span><span class="v cyan" id="ivHeading">0°</span></div>
+          <div class="intel-row"><span class="k">Inclinaison</span><span class="v amber" id="ivPitch">-35°</span></div>
+          <div class="intel-row"><span class="k">Altitude</span><span class="v green" id="ivAltitude">35 km</span></div>
+          <div class="intel-row"><span class="k">Raccourci</span><span class="v">← →</span></div>
+        </div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-head"><span>⚙️ SYSTÈME</span></div>
+        <div class="intel-body">
+          <div class="intel-row"><span class="k">Source</span><span class="v">LiveTrail API</span></div>
+          <div class="intel-row"><span class="k">Tenant</span><span class="v cyan">grandraid-reunion_2026</span></div>
+          <div class="intel-row"><span class="k">Terrain</span><span class="v">Cesium 3D</span></div>
+          <div class="intel-row"><span class="k">MAJ</span><span class="v green" id="sysUpdate">—</span></div>
+          <div class="intel-row"><span class="k">Raccourcis</span><span class="v">F · L · R · Esc</span></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<footer>
+  <div class="devise-fr">Liberté · Égalité · Fraternité</div>
+  <strong>GRAND RAID DE LA RÉUNION — 34<sup>e</sup> édition</strong> · 15–18 octobre 2026<br>
+  Données live : <a href="https://grandraid-reunion.v3.livetrail.net/fr/2026" target="_blank">LiveTrail</a>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════════ */
+function $(id) { return document.getElementById(id); }
+function setText(id, val) { const el = $(id); if (el) el.textContent = val; }
+function setHTML(id, html) { const el = $(id); if (el) el.innerHTML = html; }
+
+/* ★ CORRECTIF C : décalage des points empilés (jitter) ★ */
+function jitterPosition(lon, lat, index, total) {
+  if (total <= 1) return { lon, lat };
+  const radius = 0.0008; // ~80 m
+  const angle = (index / total) * 2 * Math.PI;
+  return {
+    lon: lon + Math.cos(angle) * radius,
+    lat: lat + Math.sin(angle) * radius
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODE SOMBRE
+   ═══════════════════════════════════════════════════════════ */
+const themeToggle = $('themeToggle');
+const savedTheme = localStorage.getItem('theme') || 'light';
+if (savedTheme === 'dark') {
+  document.documentElement.classList.add('dark');
+  if (themeToggle) themeToggle.textContent = '☀️ Clair';
+}
+if (themeToggle) {
+  themeToggle.addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+    const isDark = document.documentElement.classList.contains('dark');
+    themeToggle.textContent = isDark ? '☀️ Clair' : '🌙 Sombre';
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOGGLES PANNEAUX
+   ═══════════════════════════════════════════════════════════ */
+const appEl = $('appEl');
+
+function safeAddListener(id, event, fn) {
+  const el = $(id);
+  if (el) el.addEventListener(event, fn);
+}
+
+safeAddListener('toggleLeft', 'click', function() {
+  appEl.classList.toggle('hide-left');
+  if (appEl.classList.contains('hide-left')) appEl.classList.remove('focus-map');
+  this.classList.toggle('active', appEl.classList.contains('hide-left'));
+  setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
+});
+safeAddListener('toggleRight', 'click', function() {
+  appEl.classList.toggle('hide-right');
+  if (appEl.classList.contains('hide-right')) appEl.classList.remove('focus-map');
+  this.classList.toggle('active', appEl.classList.contains('hide-right'));
+  setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
+});
+safeAddListener('toggleFocus', 'click', function() {
+  appEl.classList.toggle('focus-map');
+  if (appEl.classList.contains('focus-map')) appEl.classList.remove('hide-left', 'hide-right');
+  this.classList.toggle('active', appEl.classList.contains('focus-map'));
+  setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
+});
+safeAddListener('toggleRankings', 'click', function() {
+  appEl.classList.toggle('hide-rankings');
+  this.classList.toggle('active', appEl.classList.contains('hide-rankings'));
+  setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
+});
+safeAddListener('legendToggle', 'click', (e) => {
+  e.stopPropagation();
+  const legend = $('legend');
+  if (legend) legend.classList.toggle('collapsed');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'f' || e.key === 'F') $('toggleFocus')?.click();
+  else if (e.key === 'l' || e.key === 'L') $('toggleLeft')?.click();
+  else if (e.key === 'r' || e.key === 'R') $('toggleRight')?.click();
+  else if (e.key === 'Escape') {
+    appEl.classList.remove('focus-map', 'hide-left', 'hide-right', 'hide-rankings');
+    document.querySelectorAll('.wb-btn.gray').forEach(b => b.classList.remove('active'));
+    setTimeout(() => viewer && viewer.resize && viewer.resize(), 400);
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   CONFIG
+   ═══════════════════════════════════════════════════════════ */
+const TENANT = 'grandraid-reunion_2026';
+const API_BASE = 'https://api.v3.livetrail.net/api/events';
+const API_LIVE = `${API_BASE}/races/lives`;
+const API_RACES = `${API_BASE}/races/`;
+const API_RACE_LIVE = (raceId) => `${API_BASE}/races/${raceId}/live`;
+const API_RANKING = (raceId, limit, page) => `${API_BASE}/ranking/progressive/${raceId}?limit=${limit}&page=${page}`;
+const API_POINTS = `${API_BASE}/points?raceId=`;
+const API_RUNNERS = `${API_BASE}/runners`;
+const API_HEAD_RUNNERS = (raceId) => `${API_BASE}/races/${raceId}/head-runners`;
+
+const REFRESH_MS = 60000;
+const TRACK_REFRESH_MS = 30000;
+const TOP_N = 15;
+const RANKING_LIMIT = 500;
+const ACTIVE_STATUSES = ['RACE_IN_PROGRESS', 'STARTED', 'LIVE', 'ON_RACE'];
+
+/* ★ CORRECTIF A : vue par défaut centrée sur l'île entière ★ */
+const DEFAULT_CAMERA = {
+  lon: 55.42,
+  lat: -21.13,
+  alt: 80000,
+  pitch: -45
+};
+
+const RACES = {
+  GRR: { name: 'Diagonale des Fous', code: 'DDF', dist: 180, dplus: '10 200 m', start: 'Saint-Pierre',  startLon: 55.45966, startLat: -21.33975, color: '#F9B233', icon: '🏔️', relays: false, short: 'DDF' },
+  MAS: { name: 'Mascareignes',       code: 'MAS', dist: 74,  dplus: '3 800 m',  start: 'Hell-Bourg',    startLon: 55.52054, startLat: -21.0699,  color: '#009E60', icon: '🌿', relays: false, short: 'MAS' },
+  TDB: { name: 'Trail de Bourbon',   code: 'TDB', dist: 106, dplus: '6 200 m',  start: 'Cilaos',        startLon: 55.471,   startLat: -21.134,   color: '#1B5DA8', icon: '💧', relays: false, short: 'TDB' },
+  ZEM: { name: 'Zembrocal Trail',    code: 'ZEM', dist: 160, dplus: '8 460 m',  start: 'Saint-Joseph',  startLon: 55.62,    startLat: -21.378,   color: '#E4032E', icon: '🔁', relays: true,  short: 'ZEM' },
+  MTR: { name: 'Métis Trail',        code: 'MTR', dist: 51,  dplus: '2 500 m',  start: 'Saint-Paul',    startLon: 55.271,   startLat: -21.010,   color: '#fc8230', icon: '🌅', relays: false, short: 'MTR' }
+};
+
+let TRACK_POINTS = { GRR: [], MAS: [], TDB: [], ZEM: [], MTR: [] };
+let RACE_POINTS = { GRR: {}, MAS: {}, TDB: {}, ZEM: {}, MTR: {} };
+let TRACKS = { GRR: null, MAS: null, TDB: null, ZEM: null, MTR: null };
+let viewer = null;
+let liveData = [];
+let currentRace = 'GRR';
+let activeRaces = ['GRR', 'MAS', 'TDB', 'ZEM', 'MTR'];
+let trackDataSources = {};
+let trackVisibility = { GRR: true, MAS: true, TDB: true, ZEM: true, MTR: true };
+
+let rankingCache = { GRR: { male: [], female: [] }, MAS: { male: [], female: [] }, TDB: { male: [], female: [] }, ZEM: { male: [], female: [] }, MTR: { male: [], female: [] } };
+let activeRankingRace = { male: 'GRR', female: 'GRR' };
+let liveMarkers = {};
+let trackingActive = false;
+let trackingTimer = null;
+
+let runnersSnapshot = { GRR: {}, MAS: {}, TDB: {}, ZEM: {}, MTR: {} };
+let dnfDetected = { GRR: [], MAS: [], TDB: [], ZEM: [], MTR: [] };
+const MIN_SNAPSHOT_AGE_MS = 90000;
+
+/* ═══════════════════════════════════════════════════════════
+   CESIUM
+   ═══════════════════════════════════════════════════════════ */
+async function initCesium() {
+  viewer = new Cesium.Viewer('cesiumContainer', {
+    baseLayerPicker: false, geocoder: false, homeButton: false,
+    sceneModePicker: false, navigationHelpButton: false,
+    animation: false, timeline: false, fullscreenButton: false,
+    infoBox: false, selectionIndicator: false
+  });
+
+  viewer.scene.globe.enableLighting = false;
+  viewer.scene.globe.brightness = 1.6;
+  viewer.scene.globe.contrast = 1.3;
+  viewer.scene.globe.saturation = 1.2;
+  viewer.scene.globe.showGroundAtmosphere = false;
+  viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#4a90c2');
+  viewer.scene.fog.enabled = false;
+
+  viewer.scene.screenSpaceCameraController.enableTilt = true;
+  viewer.scene.screenSpaceCameraController.enableRotate = true;
+  viewer.scene.screenSpaceCameraController.enableLook = true;
+  viewer.scene.screenSpaceCameraController.minimumZoomDistance = 500;
+  viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000000;
+
+  viewer.imageryLayers.removeAll();
+  viewer.imageryLayers.addImageryProvider(
+    new Cesium.UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      credit: 'Tiles © Esri',
+      maximumLevel: 19,
+      tilingScheme: new Cesium.WebMercatorTilingScheme()
+    })
+  );
+
+  const credit = viewer._cesiumWidget._creditContainer;
+  if (credit) credit.style.display = 'none';
+
+  /* ★ CORRECTIF A : cadrage élargi pour voir toutes les courses ★ */
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(DEFAULT_CAMERA.lon, DEFAULT_CAMERA.lat, DEFAULT_CAMERA.alt),
+    orientation: { heading: 0, pitch: Cesium.Math.toRadians(DEFAULT_CAMERA.pitch), roll: 0 }
+  });
+
+  addRaceMarkers();
+  setupCompass();
+}
+
+function addRaceMarkers() {
+  Object.entries(RACES).forEach(([code, info]) => {
+    viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(info.startLon, info.startLat, 0),
+      point: {
+        pixelSize: 14,
+        color: Cesium.Color.fromCssColorString(info.color),
+        outlineColor: Cesium.Color.WHITE, outlineWidth: 3,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      },
+      label: {
+        text: info.name,
+        font: 'bold 15px Inter, sans-serif',  /* ★ CORRECTIF D : plus gros */
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK, outlineWidth: 3,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -30),  /* ★ plus haut */
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      }
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BOUSSOLE
+   ═══════════════════════════════════════════════════════════ */
+function setupCompass() {
+  const compass = $('compass');
+  const needle = $('compassNeedle');
+  const angleLabel = $('compassAngle');
+  const resetBtn = $('compassReset');
+  if (!compass) return;
+
+  let isDragging = false;
+  let startX = 0;
+  let startHeading = 0;
+
+  function updateCompass() {
+    if (!viewer) return;
+    const heading = Cesium.Math.toDegrees(viewer.camera.heading);
+    const normalized = ((heading % 360) + 360) % 360;
+    if (needle) needle.style.transform = `rotate(${-normalized}deg)`;
+    if (angleLabel) angleLabel.textContent = Math.round(normalized) + '°';
+
+    const pitch = Cesium.Math.toDegrees(viewer.camera.pitch);
+    const altitude = viewer.camera.positionCartographic.height;
+    setText('ivHeading', Math.round(normalized) + '°');
+    setText('ivPitch', Math.round(pitch) + '°');
+    setText('ivAltitude', altitude > 1000 ? Math.round(altitude / 1000) + ' km' : Math.round(altitude) + ' m');
+  }
+
+  viewer.camera.changed.addEventListener(updateCompass);
+  viewer.camera.percentageChanged = 0.005;
+  updateCompass();
+
+  compass.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    isDragging = true;
+    startX = e.clientX;
+    startHeading = viewer.camera.heading;
+    compass.style.cursor = 'grabbing';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - startX;
+    const newHeading = startHeading - deltaX * 0.008;
+    viewer.camera.setView({
+      orientation: { heading: newHeading, pitch: viewer.camera.pitch, roll: 0 }
+    });
+    updateCompass();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      compass.style.cursor = 'grab';
+    }
+  });
+
+  compass.querySelectorAll('.compass-label').forEach(label => {
+    label.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dir = label.dataset.dir;
+      const headings = { 'N': 0, 'E': 90, 'S': 180, 'O': 270, 'W': 270 };
+      const targetHeading = Cesium.Math.toRadians(headings[dir] || 0);
+      viewer.camera.flyTo({
+        destination: viewer.camera.position,
+        orientation: { heading: targetHeading, pitch: viewer.camera.pitch, roll: 0 },
+        duration: 0.8
+      });
+    });
+  });
+
+  compass.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    resetView();
+  });
+
+  if (resetBtn) resetBtn.addEventListener('click', resetView);
+
+  function resetView() {
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(DEFAULT_CAMERA.lon, DEFAULT_CAMERA.lat, DEFAULT_CAMERA.alt),
+      orientation: { heading: 0, pitch: Cesium.Math.toRadians(DEFAULT_CAMERA.pitch), roll: 0 },
+      duration: 1
+    });
+  }
+
+  console.log('🧭 Boussole activée');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (!viewer) return;
+  const step = Cesium.Math.toRadians(5);
+  let heading = viewer.camera.heading;
+  let changed = false;
+
+  if (e.key === 'ArrowLeft') { heading -= step; changed = true; }
+  else if (e.key === 'ArrowRight') { heading += step; changed = true; }
+
+  if (changed) {
+    viewer.camera.setView({
+      orientation: { heading, pitch: viewer.camera.pitch, roll: viewer.camera.roll }
+    });
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   TRACÉS
+   ═══════════════════════════════════════════════════════════ */
+async function loadTrackUrls() {
+  setStatus('🔍 Récupération des URLs de tracés…');
+  let loaded = 0;
+  for (const raceId of Object.keys(TRACKS)) {
+    try {
+      const r = await fetch(API_RACES + raceId, { headers: { 'X-Tenant': TENANT } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (d.trackUrl) { TRACKS[raceId] = d.trackUrl; loaded++; }
+    } catch (e) { console.error('❌ ' + raceId, e.message); }
+  }
+  setStatus('✓ ' + loaded + '/5 URLs récupérées', '#00a854');
+}
+
+async function loadTrack(raceId) {
+  const url = TRACKS[raceId];
+  if (!url) return false;
+  if (trackDataSources[raceId]) {
+    trackDataSources[raceId].show = trackVisibility[raceId];
+    return true;
+  }
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const raw = await r.json();
+
+    let coordinates = [];
+    const points = [];
+
+    if (Array.isArray(raw.segments)) {
+      raw.segments.forEach(seg => {
+        if (!Array.isArray(seg.segment)) return;
+        seg.segment.forEach(pt => {
+          if (Array.isArray(pt) && Array.isArray(pt[2]) && pt[2].length >= 2) {
+            const distM = pt[0], altM = pt[1], lon = pt[2][0], lat = pt[2][1];
+            const terrain = pt[5] || 'R';
+            if (typeof lon === 'number' && typeof lat === 'number' &&
+                lon > -180 && lon < 180 && lat > -90 && lat < 90) {
+              coordinates.push([lon, lat]);
+              points.push({ km: distM / 1000, alt: altM, lon, lat, terrain });
+            }
+          }
+        });
+      });
+    }
+    if (!coordinates.length) throw new Error('Aucune coordonnée');
+
+    points.sort((a, b) => a.km - b.km);
+    TRACK_POINTS[raceId] = points;
+    console.log(`📍 ${raceId} : ${points.length} points de tracé (${points[points.length-1].km.toFixed(1)} km)`);
+
+    const geojson = {
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: coordinates },
+      properties: { name: RACES[raceId].name, raceId: raceId }
+    };
+
+    const ds = await Cesium.GeoJsonDataSource.load(geojson, {
+      stroke: Cesium.Color.fromCssColorString(RACES[raceId].color),
+      strokeWidth: 10,
+      clampToGround: true
+    });
+
+    ds.entities.values.forEach(entity => {
+      if (entity.polyline) {
+        entity.polyline.material = new Cesium.PolylineOutlineMaterialProperty({
+          color: Cesium.Color.fromCssColorString(RACES[raceId].color),
+          outlineWidth: 4,
+          outlineColor: Cesium.Color.WHITE
+        });
+        entity.polyline.width = 10;
+        entity.polyline.clampToGround = true;
+      }
+    });
+
+    ds.show = trackVisibility[raceId];
+    viewer.dataSources.add(ds);
+    trackDataSources[raceId] = ds;
+    console.log('✅ ' + raceId + ' : ' + coordinates.length + ' pts');
+    return true;
+  } catch (e) {
+    console.error('❌ Erreur ' + raceId, e);
+    return false;
+  }
+}
+
+async function loadRacePoints(raceId) {
+  try {
+    const r = await fetch(API_POINTS + raceId, { headers: { 'X-Tenant': TENANT } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const points = await r.json();
+
+    const map = {};
+    points.forEach(p => {
+      map[p.pointId] = {
+        pointId: p.pointId,
+        km: (p.distance || 0) / 1000,
+        lat: p.lat,
+        lon: p.lon,
+        alt: p.altitude || 0,
+        name: p.name || p.shortName || `Point ${p.pointId}`
+      };
+    });
+    RACE_POINTS[raceId] = map;
+    console.log(`📌 ${raceId} : ${points.length} points de passage indexés`);
+  } catch (e) {
+    console.error(`❌ points ${raceId}:`, e);
+  }
+}
+
+async function loadAllRacePoints() {
+  for (const raceId of Object.keys(RACE_POINTS)) {
+    await loadRacePoints(raceId);
+  }
+}
+
+async function loadAllTracks() {
+  const btn = $('loadBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ <span class="lbl">Chargement...</span>';
+  }
+
+  for (const raceId of Object.keys(TRACKS)) {
+    setStatus('📥 Chargement ' + raceId + '…');
+    await loadTrack(raceId);
+  }
+
+  const loaded = Object.keys(trackDataSources).length;
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '📥 <span class="lbl">Tracés</span>';
+  }
+  setStatus('✓ ' + loaded + '/5 tracés chargés', '#00a854');
+
+  /* ★ CORRECTIF A ★ */
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(DEFAULT_CAMERA.lon, DEFAULT_CAMERA.lat, DEFAULT_CAMERA.alt),
+    orientation: { heading: 0, pitch: Cesium.Math.toRadians(DEFAULT_CAMERA.pitch), roll: 0 },
+    duration: 2
+  });
+}
+
+function toggleTrackVisibility(raceId) {
+  if (!trackDataSources[raceId]) return;
+  trackVisibility[raceId] = !trackVisibility[raceId];
+  trackDataSources[raceId].show = trackVisibility[raceId];
+  const row = document.querySelector(`.legend-row[data-race="${raceId}"]`);
+  if (row) row.classList.toggle('hidden', !trackVisibility[raceId]);
+}
+
+function viewAll() {
+  /* ★ CORRECTIF A ★ */
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(DEFAULT_CAMERA.lon, DEFAULT_CAMERA.lat, DEFAULT_CAMERA.alt),
+    orientation: { heading: 0, pitch: Cesium.Math.toRadians(DEFAULT_CAMERA.pitch), roll: 0 },
+    duration: 2
+  });
+}
+
+function getPositionFromTrack(raceId, km) {
+  const pts = TRACK_POINTS[raceId];
+  if (!pts || !pts.length) return null;
+  const minKm = pts[0].km, maxKm = pts[pts.length - 1].km;
+  km = Math.max(minKm, Math.min(maxKm, km));
+
+  let lo = 0, hi = pts.length - 1;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (pts[mid].km < km) lo = mid + 1;
+    else hi = mid;
+  }
+
+  const p2 = pts[lo], p1 = pts[Math.max(0, lo - 1)];
+  if (!p1 || !p2) return p2;
+  const range = p2.km - p1.km;
+  const ratio = range > 0 ? (km - p1.km) / range : 0;
+
+  return {
+    km,
+    alt: p1.alt + (p2.alt - p1.alt) * ratio,
+    lon: p1.lon + (p2.lon - p1.lon) * ratio,
+    lat: p1.lat + (p2.lat - p1.lat) * ratio,
+    terrain: p2.terrain
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FETCH
+   ═══════════════════════════════════════════════════════════ */
+async function fetchRaceLive(raceId) {
+  try {
+    const r = await fetch(API_RACE_LIVE(raceId), { headers: { 'X-Tenant': TENANT } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+}
+
+async function fetchRankingProgressive(raceId, limit = RANKING_LIMIT, page = 0) {
+  try {
+    const r = await fetch(API_RANKING(raceId, limit, page), { headers: { 'X-Tenant': TENANT } });
+    if (!r.ok) return { runners: [], total: 0 };
+    const data = await r.json();
+    return data;
+  } catch (e) {
+    console.error(`❌ ranking ${raceId}:`, e);
+    return { runners: [], total: 0 };
+  }
+}
+
+async function fetchZemTeams() {
+  try {
+    const r = await fetch(API_HEAD_RUNNERS('ZEM'), { headers: { 'X-Tenant': TENANT } });
+    if (!r.ok) return { male: [], female: [] };
+    const d = await r.json();
+    return {
+      male: (d.scratch || []).slice(0, TOP_N),
+      female: (d.female || []).slice(0, TOP_N)
+    };
+  } catch (e) {
+    console.error('❌ fetchZemTeams:', e);
+    return { male: [], female: [] };
+  }
+}
+
+function getActiveRelayBib(team) {
+  if (!team || !Array.isArray(team.teammates)) return null;
+  const activeIndex = team.index;
+  if (activeIndex == null) return null;
+  const active = team.teammates.find(t => t.index === activeIndex);
+  return active ? active.bib : null;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ABANDONS
+   ═══════════════════════════════════════════════════════════ */
+function detectDnf(raceId, currentRunners) {
+  const now = Date.now();
+  const prevSnapshot = runnersSnapshot[raceId] || {};
+  const currentBibs = new Set();
+
+  const newSnapshot = {};
+  currentRunners.forEach(r => {
+    if (r.bib == null) return;
+    currentBibs.add(r.bib);
+    const prev = prevSnapshot[r.bib];
+    newSnapshot[r.bib] = {
+      bib: r.bib,
+      firstName: r.firstName || '',
+      lastName: r.lastName || '',
+      teamName: r.teamName || null,
+      sex: r.sex || 'MALE',
+      nationality: r.nationality || r.countryCode || null,
+      isRelay: RACES[raceId]?.relays || false,
+      firstSeenAt: prev?.firstSeenAt || now,
+      lastSeenAt: now,
+      lastKm: prev?.lastKm ?? null,
+      lastPointId: prev?.lastPointId ?? null
+    };
+  });
+
+  const newDnf = [];
+  Object.keys(prevSnapshot).forEach(bib => {
+    const bibNum = parseInt(bib, 10);
+    if (!currentBibs.has(bibNum)) {
+      const prev = prevSnapshot[bib];
+      if (now - prev.firstSeenAt < MIN_SNAPSHOT_AGE_MS) return;
+      if (dnfDetected[raceId].some(d => d.bib === bibNum)) return;
+
+      newDnf.push({
+        ...prev,
+        disappearedAt: now
+      });
+    }
+  });
+
+  runnersSnapshot[raceId] = newSnapshot;
+  if (newDnf.length) {
+    dnfDetected[raceId] = [...dnfDetected[raceId], ...newDnf];
+    console.log(`🚫 ${raceId}: +${newDnf.length} abandon(s) détecté(s) (total: ${dnfDetected[raceId].length})`);
+  }
+
+  return newDnf;
+}
+
+function seedDnfSnapshot(raceId, currentRunners) {
+  const now = Date.now();
+  const snap = {};
+  currentRunners.forEach(r => {
+    if (r.bib == null) return;
+    snap[r.bib] = {
+      bib: r.bib,
+      firstName: r.firstName || '',
+      lastName: r.lastName || '',
+      teamName: r.teamName || null,
+      sex: r.sex || 'MALE',
+      nationality: r.nationality || r.countryCode || null,
+      isRelay: RACES[raceId]?.relays || false,
+      firstSeenAt: now,
+      lastSeenAt: now,
+      lastKm: null,
+      lastPointId: null
+    };
+  });
+  runnersSnapshot[raceId] = snap;
+}
+
+function renderDnfPanel() {
+  const listEl = $('dnfList');
+  const countEl = $('dnfCount');
+  const tbEl = $('tbDnf');
+  const statEl = $('stat-dnf');
+  if (!listEl) return;
+
+  const all = [];
+  activeRaces.forEach(raceId => {
+    (dnfDetected[raceId] || []).forEach(r => all.push({ ...r, raceId }));
+  });
+
+  all.sort((a, b) => (b.disappearedAt || 0) - (a.disappearedAt || 0));
+
+  if (countEl) countEl.textContent = all.length;
+  if (tbEl) tbEl.textContent = all.length;
+  if (statEl) statEl.textContent = all.length;
+
+  if (countEl) {
+    const recent = all.some(r => Date.now() - (r.disappearedAt || 0) < 300000);
+    countEl.classList.toggle('pulse', recent);
+  }
+
+  if (!all.length) {
+    listEl.innerHTML = '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">Aucun abandon détecté</div>';
+    return;
+  }
+
+  listEl.innerHTML = all.map(r => {
+    const info = RACES[r.raceId];
+    const name = r.isRelay
+      ? (r.teamName || `Équipe #${r.bib}`)
+      : `${r.firstName || '?'} ${r.lastName || '?'}`;
+    const timeAgo = formatTimeAgo(r.disappearedAt);
+    const lastKm = r.lastKm != null ? `km ${r.lastKm.toFixed(0)}` : '—';
+
+    return `
+      <div class="intel-row" style="align-items:flex-start;padding:6px 0">
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="background:${info.color};color:#fff;font-size:8px;font-weight:800;
+                         padding:1px 4px;border-radius:2px;font-family:monospace;flex-shrink:0">
+              ${info.short}
+            </span>
+            <span style="font-weight:700;color:var(--text-0);overflow:hidden;
+                         text-overflow:ellipsis;white-space:nowrap;font-size:10px"
+                  title="${name}">${r.isRelay ? '🔁 ' : ''}${name}</span>
+          </div>
+          <div style="display:flex;gap:8px;font-size:8px;color:var(--text-2);flex-wrap:wrap">
+            <span>#${r.bib}</span>
+            ${r.nationality ? `<span>${r.nationality}</span>` : ''}
+            <span>Vu jusqu'à <strong style="color:var(--amber)">${lastKm}</strong></span>
+            <span style="color:var(--fr-red);font-weight:700">il y a ${timeAgo}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatTimeAgo(timestamp) {
+  if (!timestamp) return '—';
+  const diff = Date.now() - timestamp;
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h${m % 60}min`;
+  return `${Math.floor(h / 24)}j`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR
+   ═══════════════════════════════════════════════════════════ */
+function renderSidebar() {
+  const el = $('sbList');
+  if (!el) return;
+
+  setText('sbCount', 'Cochez pour suivre en simultané');
+
+  el.innerHTML = Object.entries(RACES).map(([code, info]) => {
+    const race = liveData.find(r => r.raceId === code);
+    const status = race ? (race.status === 'RACE_NOT_LAUNCHED' ? 'À venir' :
+                          ACTIVE_STATUSES.includes(race.status) ? '● LIVE' : 'Terminée') : '—';
+    const registered = race?.stats?.registered ?? '—';
+    const isActive = activeRaces.includes(code);
+    const isCurrent = code === currentRace;
+    const relayBadge = info.relays ? ' <span style="color:var(--fr-red);font-size:8px">(relais)</span>' : '';
+
+    return `
+      <div class="sb-item ${isCurrent ? 'active' : ''}" data-race="${code}">
+        <div class="sb-item-h">
+          <input type="checkbox" ${isActive ? 'checked' : ''} data-checkbox="${code}">
+          <span class="sb-item-icon" style="color:${info.color}">${info.icon}</span>
+          <span class="sb-item-name">${info.name}${relayBadge}</span>
+        </div>
+        <div class="sb-item-meta">
+          <span class="${status === '● LIVE' ? 'live' : ''}">${status}</span>
+          <span>${info.dist} km</span>
+          <span>${registered} inscrits</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  el.querySelectorAll('input[data-checkbox]').forEach(cb => {
+    cb.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const raceId = cb.dataset.checkbox;
+      if (cb.checked) {
+        if (!activeRaces.includes(raceId)) activeRaces.push(raceId);
+      } else {
+        activeRaces = activeRaces.filter(r => r !== raceId);
+      }
+      updateActiveRacesInfo();
+      renderDnfPanel();
+      if (trackingActive) updateAllMarkers();
+    });
+  });
+
+  el.querySelectorAll('.sb-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      currentRace = item.dataset.race;
+      activeRankingRace.male = currentRace;
+      activeRankingRace.female = currentRace;
+      renderAll();
+      /* ★ CORRECTIF A ★ */
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(DEFAULT_CAMERA.lon, DEFAULT_CAMERA.lat, DEFAULT_CAMERA.alt),
+        orientation: { heading: 0, pitch: Cesium.Math.toRadians(DEFAULT_CAMERA.pitch), roll: 0 },
+        duration: 1.5
+      });
+    });
+  });
+
+  updateActiveRacesInfo();
+}
+
+function updateActiveRacesInfo() {
+  const el = $('activeRacesInfo');
+  if (!el) return;
+
+  if (!activeRaces.length) {
+    el.innerHTML = '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">Aucune course sélectionnée</div>';
+    return;
+  }
+
+  el.innerHTML = activeRaces.map(raceId => {
+    const info = RACES[raceId];
+    if (!info) return '';
+    const count = Object.values(liveMarkers).filter(m => m.raceId === raceId).length;
+    const label = info.relays ? 'équipes' : 'suivis';
+    return `
+      <div class="intel-row">
+        <span class="k" style="color:${info.color}">
+          ${info.icon} ${info.name}
+        </span>
+        <span class="v green">${count} ${label}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CLASSEMENTS
+   ═══════════════════════════════════════════════════════════ */
+async function loadAndRenderRanking(raceId) {
+  let runners = [];
+
+  if (RACES[raceId]?.relays) {
+    const teams = await fetchZemTeams();
+    runners = [
+      ...teams.male.map(t => ({ ...t, sex: 'MALE' })),
+      ...teams.female.map(t => ({ ...t, sex: 'FEMALE' }))
+    ];
+  } else {
+    const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
+    runners = data.runners || [];
+  }
+
+  const males = runners.filter(r => r.sex === 'MALE');
+  const females = runners.filter(r => r.sex === 'FEMALE');
+
+  rankingCache[raceId] = { male: males, female: females };
+
+  if (!Object.keys(runnersSnapshot[raceId]).length) {
+    seedDnfSnapshot(raceId, runners);
+  } else {
+    detectDnf(raceId, runners);
+  }
+
+  const unit = RACES[raceId]?.relays ? 'équipes' : '';
+  console.log(`📊 ${raceId}: ${males.length} ${unit} H, ${females.length} ${unit} F`);
+}
+
+function renderRaceTabs(sex) {
+  const containerId = sex === 'male' ? 'tabs-scratch' : 'tabs-female';
+  const el = $(containerId);
+  if (!el) return;
+
+  el.innerHTML = activeRaces.map(raceId => {
+    const info = RACES[raceId];
+    const isActive = activeRankingRace[sex] === raceId;
+    return `<button class="race-tab ${isActive ? 'active' : ''}" data-race="${raceId}" data-sex="${sex}"
+      style="${isActive ? 'background:' + info.color + ';border-color:' + info.color : ''}">
+      ${info.icon} ${info.short}
+    </button>`;
+  }).join('');
+
+  el.querySelectorAll('.race-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      activeRankingRace[sex] = tab.dataset.race;
+      renderRaceTabs('male');
+      renderRaceTabs('female');
+      renderRankingPanel('rank-scratch', 'count-scratch', rankingCache[activeRankingRace.male]?.male || [], TOP_N, 'male');
+      renderRankingPanel('rank-female', 'count-female', rankingCache[activeRankingRace.female]?.female || [], TOP_N, 'female');
+    });
+  });
+}
+
+function renderRankingPanel(containerId, countId, list, limit, sex) {
+  const el = $(containerId);
+  const countEl = $(countId);
+  if (!el) return;
+
+  const raceId = activeRankingRace[sex];
+  const isRelay = RACES[raceId]?.relays;
+
+  if (!list || !list.length) {
+    el.innerHTML = '<p style="color:var(--text-2);font-size:.75em;padding:8px;font-family:var(--font-mono)">En attente des premiers passages…</p>';
+    if (countEl) countEl.textContent = '0';
+    return;
+  }
+
+  const runners = list.slice(0, limit);
+  if (countEl) countEl.textContent = `${list.length} ${isRelay ? 'équipes' : 'coureurs'}`;
+
+  el.innerHTML = runners.map((r, i) => {
+    const cls = i === 0 ? 'p1' : i === 1 ? 'p2' : i === 2 ? 'p3' : '';
+    const isTracked = liveMarkers[`${raceId}-${r.bib}`] ? 'tracked' : '';
+    const rank = r.ranking?.scratch || (i + 1);
+    const diff = r.diffToFirst != null && r.diffToFirst > 0 ? `+${r.diffToFirst}s` : '—';
+    const livePos = liveMarkers[`${raceId}-${r.bib}`]?.lastPosition;
+    const liveInfo = livePos ? `<span class="pos-live">${livePos.km.toFixed(0)} km</span>` : '';
+    const raceColor = RACES[raceId]?.color || '#0055A4';
+
+    const displayName = isRelay
+      ? (r.teamName || `Équipe #${r.bib}`)
+      : `${r.firstName || '—'} ${r.lastName || '—'}`;
+
+    return `
+      <div class="rank-item ${cls} ${isTracked}">
+        <span class="medal">${rank}</span>
+        <span class="race-badge" style="background:${raceColor};color:#fff">${RACES[raceId]?.short || raceId}</span>
+        <span class="name">${isRelay ? '🔁 ' : ''}${displayName}</span>
+        ${liveInfo}
+        <span class="diff">${diff}</span>
+        <span class="bib">#${r.bib || '—'}</span>
+        <span class="flag">${r.nationality || r.countryCode || '—'}</span>
+      </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATS
+   ═══════════════════════════════════════════════════════════ */
+function renderStatsFromLive(raceLive) {
+  if (!raceLive) return;
+
+  const s = raceLive.stats || {};
+  const status = raceLive.status || '—';
+
+  setText('ivStatus', status);
+  setText('tbStatus', status);
+  setText('stat-status', status);
+  setText('stat-registered', s.registered ?? '—');
+  setText('stat-onrace', s.onRace ?? 0);
+  setText('stat-finisher', s.finisher ?? 0);
+  setText('stat-dnf', dnfDetected[currentRace]?.length || 0);
+  setText('gsRegistered', s.registered ?? '—');
+  setText('gsOnRace', s.onRace ?? 0);
+  setText('gsFinisher', s.finisher ?? 0);
+  setText('gsDnf', dnfDetected[currentRace]?.length || 0);
+
+  const distEl = $('distributionList');
+  if (!distEl) return;
+  const dist = raceLive.distribution;
+  if (dist && dist.ranges && dist.ranges.length) {
+    const total = dist.total || 1;
+    distEl.innerHTML = dist.ranges.map(range => {
+      const pct = ((range.total / total) * 100).toFixed(1);
+      const label = `${(range.startKm/1000).toFixed(0)} → ${(range.stopKm/1000).toFixed(0)} km`;
+      return `
+        <div class="intel-row" style="flex-direction:column;align-items:stretch;gap:4px">
+          <div style="display:flex;justify-content:space-between">
+            <span class="k">${label}</span>
+            <span class="v cyan">${range.total} · ${pct}%</span>
+          </div>
+          <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    distEl.innerHTML = '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:8px">—</div>';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SUIVI LIVE
+   ═══════════════════════════════════════════════════════════ */
+async function tryFetchRunnerPosition(raceId, bib) {
+  try {
+    const r = await fetch(`${API_RUNNERS}/${bib}`, { headers: { 'X-Tenant': TENANT } });
+    if (!r.ok) return null;
+    const d = await r.json();
+
+    const lastPointId = d.lastPassage?.pointId;
+
+    if (lastPointId == null) {
+      const info = RACES[raceId];
+      if (!info) return null;
+      return {
+        bib,
+        km: 0,
+        name: `Départ (${info.start})`,
+        time: null,
+        rank: d.ranking?.scratch || 0,
+        lat: info.startLat,
+        lon: info.startLon,
+        alt: 0,
+        status: d.status || 'NOT_STARTED',
+        nextPointId: null,
+        progress: 0,
+        lastPointId: null
+      };
+    }
+
+    const cpLast = RACE_POINTS[raceId]?.[lastPointId];
+    if (!cpLast || cpLast.lat == null || cpLast.lon == null) {
+      const info = RACES[raceId];
+      if (!info) return null;
+      return {
+        bib,
+        km: 0,
+        name: `Point #${lastPointId} (inconnu)`,
+        time: d.lastPassage?.dateTime || null,
+        rank: d.ranking?.scratch || 0,
+        lat: info.startLat,
+        lon: info.startLon,
+        alt: 0,
+        status: d.status || 'UNKNOWN',
+        nextPointId: null,
+        progress: 0,
+        lastPointId
+      };
+    }
+
+    const nextPointId = d.nextPassage?.pointId;
+    const cpNext = nextPointId != null ? RACE_POINTS[raceId]?.[nextPointId] : null;
+
+    let km = cpLast.km, lat = cpLast.lat, lon = cpLast.lon, alt = cpLast.alt;
+    let name = cpLast.name;
+    let progress = 0;
+
+    if (cpNext && cpNext.lat != null && cpNext.lon != null) {
+      const t0 = d.lastPassage.dateTime ? new Date(d.lastPassage.dateTime).getTime() : null;
+      const t1 = d.nextPassage.dateTime ? new Date(d.nextPassage.dateTime).getTime() : null;
+      const now = Date.now();
+
+      if (t0 && t1 && t1 > t0) {
+        let ratio = (now - t0) / (t1 - t0);
+        ratio = Math.max(0, Math.min(1, ratio));
+        progress = ratio;
+        km = cpLast.km + (cpNext.km - cpLast.km) * ratio;
+
+        const pos = getPositionFromTrack(raceId, km);
+        if (pos) { lat = pos.lat; lon = pos.lon; alt = pos.alt; }
+        name = `${cpLast.name} → ${cpNext.name} (${Math.round(ratio * 100)}%)`;
+      }
+    }
+
+    return {
+      bib, km, name,
+      time: d.lastPassage.dateTime,
+      rank: d.ranking?.scratch || 0,
+      lat, lon, alt,
+      status: d.status,
+      nextPointId, progress, lastPointId
+    };
+  } catch (e) { return null; }
+}
+
+async function updateAllMarkers() {
+  if (!trackingActive) return;
+
+  const racesToTrack = [...activeRaces];
+
+  if (!racesToTrack.length) {
+    setStatus('⏸️ Aucune course sélectionnée', '#e88b00');
+    return;
+  }
+
+  Object.values(liveMarkers).forEach(m => viewer.entities.remove(m.entity));
+  liveMarkers = {};
+
+  let totalUpdated = 0;
+
+  for (const raceId of racesToTrack) {
+    if (!Object.keys(RACE_POINTS[raceId] || {}).length) {
+      await loadRacePoints(raceId);
+    }
+
+    let males = [], females = [];
+    const isRelay = RACES[raceId]?.relays;
+
+    if (isRelay) {
+      const teams = await fetchZemTeams();
+      males = teams.male;
+      females = teams.female;
+    } else {
+      const data = await fetchRankingProgressive(raceId, RANKING_LIMIT, 0);
+      const runners = data.runners || [];
+      males = runners.filter(r => r.sex === 'MALE').slice(0, TOP_N);
+      females = runners.filter(r => r.sex === 'FEMALE').slice(0, TOP_N);
+    }
+
+    const allRunners = [...males, ...females];
+    console.log(`🎯 ${raceId}: ${males.length}H + ${females.length}F à suivre`);
+
+    const positions = (await Promise.all(
+      allRunners.map(r => {
+        if (isRelay) {
+          const activeBib = getActiveRelayBib(r);
+          if (!activeBib) return null;
+          return tryFetchRunnerPosition(raceId, activeBib).then(pos => {
+            if (!pos) return null;
+            return { ...pos, teamData: r, activeBib };
+          });
+        }
+        return tryFetchRunnerPosition(raceId, r.bib).then(pos => {
+          if (!pos) return null;
+          return { ...pos, runnerData: r };
+        });
+      })
+    )).filter(Boolean);
+
+    if (positions.length === 0) {
+      console.warn(`⚠️ ${raceId}: aucune position récupérée (${allRunners.length} coureurs testés)`);
+    } else {
+      console.log(`✅ ${raceId}: ${positions.length} positions affichées`);
+    }
+
+    /* ★ CORRECTIF C : regrouper les positions identiques pour jitter ★ */
+    const positionGroups = {};
+    positions.forEach(p => {
+      const key = `${p.lat.toFixed(4)}_${p.lon.toFixed(4)}`;
+      if (!positionGroups[key]) positionGroups[key] = [];
+      positionGroups[key].push(p);
+    });
+
+    positions.forEach(pos => {
+      const runner = isRelay ? pos.teamData : pos.runnerData;
+      const activeBib = isRelay ? pos.activeBib : pos.bib;
+      const isFemale = females.some(r => r.bib === runner.bib);
+      const raceInfo = RACES[raceId];
+      const color = isFemale
+        ? Cesium.Color.fromCssColorString('#EF4135')
+        : Cesium.Color.fromCssColorString(raceInfo.color);
+
+      /* ★ CORRECTIF C : appliquer le jitter ★ */
+      const groupKey = `${pos.lat.toFixed(4)}_${pos.lon.toFixed(4)}`;
+      const group = positionGroups[groupKey];
+      const groupIdx = group.indexOf(pos);
+      const jittered = jitterPosition(pos.lon, pos.lat, groupIdx, group.length);
+      const position = Cesium.Cartesian3.fromDegrees(jittered.lon, jittered.lat, 0);
+
+      const key = `${raceId}-${runner.bib}`;
+
+      const displayName = isRelay
+        ? (runner.teamName || `Équipe #${runner.bib}`)
+        : `${runner.firstName} ${runner.lastName}`;
+
+      /* ★ CORRECTIF C : label avec compteur si empilé ★ */
+      const labelText = group.length > 1
+        ? `${displayName} (${groupIdx + 1}/${group.length})`
+        : displayName;
+
+      const entity = viewer.entities.add({
+        name: displayName,
+        position: position,
+        point: {
+          pixelSize: group.length > 1 ? 12 : 14,
+          color: color,
+          outlineColor: Cesium.Color.WHITE, outlineWidth: 3,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
+        },
+        label: {
+          text: labelText,
+          font: 'bold 11px Inter, sans-serif',
+          fillColor: Cesium.Color.WHITE,
+          outlineColor: Cesium.Color.BLACK, outlineWidth: 3,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          pixelOffset: new Cesium.Cartesian2(0, -18),
+          /* ★ CORRECTIF B : distance étendue à 200 km ★ */
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 200000),
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
+        },
+        description: buildPopupHTML(runner, pos, isFemale, raceId, isRelay, activeBib)
+      });
+
+      liveMarkers[key] = {
+        entity,
+        raceId,
+        firstName: isRelay ? '' : runner.firstName,
+        lastName: isRelay ? '' : runner.lastName,
+        teamName: isRelay ? runner.teamName : null,
+        countryCode: runner.nationality || runner.countryCode,
+        gender: isFemale ? 'female' : 'male',
+        lastPosition: pos
+      };
+      totalUpdated++;
+
+      if (runnersSnapshot[raceId]?.[runner.bib]) {
+        runnersSnapshot[raceId][runner.bib].lastKm = pos.km;
+        runnersSnapshot[raceId][runner.bib].lastPointId = pos.lastPointId;
+        runnersSnapshot[raceId][runner.bib].lastSeenAt = Date.now();
+      }
+    });
+  }
+
+  updateLiveCounter();
+  updateActiveRacesInfo();
+  renderDnfPanel();
+  const time = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  setText('ivLastUpdate', time);
+  setText('lcUpdate', time);
+  setStatus(`🟢 ${totalUpdated} coureurs/équipes suivis (${racesToTrack.join(', ')}) — MAJ ${time}`, '#00a854');
+}
+
+function buildPopupHTML(runner, pos, isFemale, raceId, isRelay, activeBib) {
+  const raceInfo = RACES[raceId];
+  const color = isFemale ? '#EF4135' : raceInfo.color;
+
+  const displayName = isRelay
+    ? (runner.teamName || `Équipe #${runner.bib}`)
+    : `${runner.firstName} ${runner.lastName}`;
+
+  let teammatesHTML = '';
+  if (isRelay && Array.isArray(runner.teammates)) {
+    teammatesHTML = `
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #eee">
+        <div style="font-size:10px;font-weight:800;color:#888;margin-bottom:4px">👥 RELAYEURS</div>
+        ${runner.teammates.map(t => {
+          const isActive = t.bib === activeBib;
+          return `<div style="font-size:11px;padding:2px 0;${isActive ? 'font-weight:800;color:' + color : 'color:#666'}">
+            ${isActive ? '▶ ' : '&nbsp;&nbsp;&nbsp;'}${t.firstName} ${t.lastName}
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  return `
+    <div style="font-family:Inter,sans-serif;padding:10px;min-width:240px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="background:${raceInfo.color};color:#fff;font-size:9px;font-weight:800;
+                     padding:2px 6px;border-radius:3px;font-family:monospace">
+          ${raceInfo.short}
+        </span>
+        <span style="font-weight:800;font-size:14px;color:${color}">
+          ${isRelay ? '🔁 ' : ''}${displayName}
+        </span>
+      </div>
+      <div style="font-size:11px;color:#666;line-height:1.6">
+        <div>🏷️ ${isRelay ? 'Équipe' : 'Dossard'} <strong>#${isRelay ? runner.bib : activeBib}</strong></div>
+        ${isRelay ? `<div>🏃 Relayeur actif <strong>#${activeBib}</strong></div>` : ''}
+        <div>🌍 ${runner.nationality || runner.countryCode || '—'}</div>
+        <div>📍 <strong>${pos.km.toFixed(1)} km</strong> · ${pos.name}</div>
+        <div>⛰️ Altitude ${Math.round(pos.alt)} m</div>
+        <div>🏆 Classement <strong>#${pos.rank || runner.ranking?.scratch}</strong></div>
+        <div>⏱️ ${pos.time ? new Date(pos.time).toLocaleTimeString('fr-FR') : '—'}</div>
+      </div>
+      ${teammatesHTML}
+    </div>
+  `;
+}
+
+function updateLiveCounter() {
+  const maleCount = Object.values(liveMarkers).filter(m => m.gender === 'male').length;
+  const femaleCount = Object.values(liveMarkers).filter(m => m.gender === 'female').length;
+
+  const byRace = {};
+  Object.values(liveMarkers).forEach(m => {
+    if (!byRace[m.raceId]) byRace[m.raceId] = { male: 0, female: 0, total: 0 };
+    byRace[m.raceId][m.gender]++;
+    byRace[m.raceId].total++;
+  });
+
+  const lcRaces = $('lcRaces');
+  if (lcRaces) {
+    lcRaces.innerHTML = Object.entries(byRace).map(([raceId, counts]) => {
+      const info = RACES[raceId];
+      const isRelay = info.relays;
+      return `
+        <div class="lc-race">
+          <span style="color:${info.color}">${info.icon}</span>
+          <span>${info.short}${isRelay ? ' 🔁' : ''}</span>
+          <span class="lc-count">${counts.total}</span>
+          <span class="lc-label">(${counts.male}H/${counts.female}F)</span>
+        </div>
+      `;
+    }).join('') || '<div style="color:var(--text-2);font-size:9px;text-align:center;padding:4px">—</div>';
+  }
+
+  setText('tbTracked', maleCount + femaleCount);
+}
+
+async function startLiveTracking() {
+  if (trackingActive) return;
+
+  if (!activeRaces.length) {
+    setStatus('⚠️ Cochez au moins une course dans la sidebar', '#e88b00');
+    return;
+  }
+
+  if (!TRACK_POINTS[currentRace] || !TRACK_POINTS[currentRace].length) {
+    setStatus('⏳ Chargement des tracés requis…', '#e88b00');
+    await loadAllTracks();
+  }
+
+  for (const raceId of Object.keys(RACES)) {
+    if (!Object.keys(RACE_POINTS[raceId] || {}).length) {
+      await loadRacePoints(raceId);
+    }
+  }
+
+  trackingActive = true;
+  const lc = $('liveCounter');
+  if (lc) lc.classList.add('visible');
+  setText('ivTrackingStatus', 'Actif');
+  const trackStatus = $('ivTrackingStatus');
+  if (trackStatus) trackStatus.style.color = 'var(--green)';
+
+  setStatus('📥 Chargement des positions…');
+  await updateAllMarkers();
+
+  if (trackingTimer) clearInterval(trackingTimer);
+  trackingTimer = setInterval(updateAllMarkers, TRACK_REFRESH_MS);
+
+  setStatus('🟢 Suivi multi-courses activé (refresh 30s)', '#00a854');
+}
+
+function stopLiveTracking() {
+  trackingActive = false;
+  if (trackingTimer) clearInterval(trackingTimer);
+  trackingTimer = null;
+
+  const lc = $('liveCounter');
+  if (lc) lc.classList.remove('visible');
+  setText('ivTrackingStatus', 'Inactif');
+  const trackStatus = $('ivTrackingStatus');
+  if (trackStatus) trackStatus.style.color = 'var(--text-1)';
+
+  Object.values(liveMarkers).forEach(m => viewer.entities.remove(m.entity));
+  liveMarkers = {};
+  updateLiveCounter();
+  updateActiveRacesInfo();
+  setStatus('⏸️ Suivi en direct arrêté', '#e88b00');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER
+   ═══════════════════════════════════════════════════════════ */
+function renderRightPanels() {
+  const race = liveData.find(r => r.raceId === currentRace);
+  const info = RACES[currentRace];
+  if (!info) return;
+
+  setText('activeIcon', info.icon);
+  setText('activeName', info.name + (info.relays ? ' (relais)' : ''));
+  setText('activeUrl', info.start + ' → Saint-Denis · ' + info.dist + ' km · ' + info.dplus);
+  setText('ivName', info.name);
+  setText('ivCode', info.code);
+  setText('ivDist', info.dist + ' km');
+  setText('ivDplus', info.dplus);
+  setText('ivStatus', race?.status || '—');
+  setText('sysUpdate', new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}));
+}
+
+async function renderAll() {
+  renderSidebar();
+  renderRightPanels();
+
+  await Promise.all(activeRaces.map(raceId => loadAndRenderRanking(raceId)));
+
+  const raceLive = await fetchRaceLive(currentRace);
+  renderStatsFromLive(raceLive);
+
+  renderRaceTabs('male');
+  renderRaceTabs('female');
+  renderRankingPanel('rank-scratch', 'count-scratch', rankingCache[activeRankingRace.male]?.male || [], TOP_N, 'male');
+  renderRankingPanel('rank-female', 'count-female', rankingCache[activeRankingRace.female]?.female || [], TOP_N, 'female');
+
+  renderDnfPanel();
+}
+
+function setStatus(msg, color) {
+  const el = $('status');
+  if (el) {
+    el.textContent = msg;
+    el.style.color = color || 'var(--text-1)';
+  }
+}
+
+function setupIntelToggle() {
+  const btn = $('intelToggle');
+  const panel = $('rightPanel');
+  const arrow = $('intelArrow');
+  if (!btn || !panel) return;
+
+  btn.addEventListener('click', () => {
+    panel.classList.toggle('open');
+    if (arrow) arrow.textContent = panel.classList.contains('open') ? '▲' : '▼';
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ÉVÉNEMENTS
+   ═══════════════════════════════════════════════════════════ */
+safeAddListener('loadBtn', 'click', loadAllTracks);
+safeAddListener('viewAllBtn', 'click', viewAll);
+
+const trackBtn = $('trackBtn');
+if (trackBtn) {
+  trackBtn.addEventListener('click', async function() {
+    if (trackingActive) {
+      stopLiveTracking();
+      this.innerHTML = '🟢 <span class="lbl">Suivi live</span>';
+      this.classList.remove('active');
+    } else {
+      this.disabled = true;
+      this.innerHTML = '⏳ <span class="lbl">Activation…</span>';
+      await startLiveTracking();
+      this.disabled = false;
+      if (trackingActive) {
+        this.innerHTML = '⏹️ <span class="lbl">Arrêter suivi</span>';
+        this.classList.add('active');
+      } else {
+        this.innerHTML = '🟢 <span class="lbl">Suivi live</span>';
+        this.classList.remove('active');
+      }
+    }
+  });
+}
+
+safeAddListener('toggleBtn', 'click', function() {
+  const allVisible = Object.values(trackVisibility).every(v => v);
+  const newState = !allVisible;
+  Object.keys(trackVisibility).forEach(raceId => {
+    trackVisibility[raceId] = newState;
+    if (trackDataSources[raceId]) trackDataSources[raceId].show = newState;
+    const row = document.querySelector(`.legend-row[data-race="${raceId}"]`);
+    if (row) row.classList.toggle('hidden', !newState);
+  });
+  this.innerHTML = newState ? '👁️ <span class="lbl">Masquer</span>' : '👁️ <span class="lbl">Afficher</span>';
+});
+
+document.querySelectorAll('.legend-row').forEach(row => {
+  row.addEventListener('click', () => toggleTrackVisibility(row.dataset.race));
+});
+
+setInterval(() => {
+  const d = new Date();
+  const p = n => n.toString().padStart(2, '0');
+  setText('tbTime', p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()));
+}, 1000);
+
+setInterval(() => {
+  if (activeRaces.length) renderDnfPanel();
+}, 15000);
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════ */
+(async function init() {
+  if (typeof Cesium === 'undefined') {
+    setStatus('❌ CesiumJS non chargé', 'var(--fr-red)');
+    return;
+  }
+  setupIntelToggle();
+
+  try {
+    await initCesium();
+    setStatus('✓ Globe 3D prêt · 🧭 Boussole active', '#00a854');
+  } catch (e) {
+    console.error('❌ Cesium :', e);
+    setStatus('❌ Erreur Cesium : ' + e.message, 'var(--fr-red)');
+    return;
+  }
+
+  await loadTrackUrls();
+  await loadAllTracks();
+  await loadAllRacePoints();
+
+  try {
+    const r = await fetch(API_LIVE, { headers: { 'X-Tenant': TENANT } });
+    liveData = await r.json();
+  } catch (e) {
+    console.error('❌ lives:', e);
+  }
+
+  await renderAll();
+  setInterval(renderAll, REFRESH_MS);
+})();
+</script>
+</body>
+</html>
